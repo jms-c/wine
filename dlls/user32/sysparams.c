@@ -25,6 +25,13 @@
 
 WINE_DEFAULT_DEBUG_CHANNEL(system);
 
+long SetThreadDpiHostingBehavior(long v) {
+    return 0;
+}
+
+long GetWindowDpiHostingBehavior(HWND v) {
+    return 0;
+}
 
 static HDC display_dc;
 static CRITICAL_SECTION display_dc_section;

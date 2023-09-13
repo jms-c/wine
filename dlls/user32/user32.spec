@@ -697,6 +697,8 @@
 @ stdcall SetParent(long long) NtUserSetParent
 @ stdcall SetPhysicalCursorPos(long long)
 @ stdcall SetProcessDPIAware()
+@ stdcall SetThreadDpiHostingBehavior(long)
+@ stdcall GetWindowDpiHostingBehavior(ptr)
 @ stdcall SetProcessDefaultLayout(long)
 @ stdcall SetProcessDpiAwarenessContext(long)
 @ stdcall SetProcessDpiAwarenessInternal(long)
