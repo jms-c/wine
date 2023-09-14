@@ -62,6 +62,14 @@ static inline BOOL get_pending_wmchar( MSG *msg, UINT first, UINT last, BOOL rem
     return TRUE;
 }
 
+// This is the wrong place but whatever
+long WINAPI SetThreadDpiHostingBehavior(long v) {
+    return 0;
+}
+
+long WINAPI GetWindowDpiHostingBehavior(HWND v) {
+    return 0;
+}
 
 /***********************************************************************
  *           MessageWndProc

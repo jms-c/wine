@@ -43,8 +43,8 @@ struct wm_char_mapping_data
     MSG  get_msg;
 };
 
-extern long SetThreadDpiHostingBehavior(long v);
-extern long GetWindowDpiHostingBehavior(HWND v);
+extern WINAPI long SetThreadDpiHostingBehavior(long v);
+extern WINAPI long GetWindowDpiHostingBehavior(HWND v);
 
 extern HMODULE user32_module DECLSPEC_HIDDEN;
 
