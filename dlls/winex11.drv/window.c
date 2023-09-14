@@ -1417,6 +1417,7 @@ static void sync_client_position( struct x11drv_win_data *data,
         TRACE( "setting client win %lx pos %d,%d,%dx%d changes=%x\n",
                data->client_window, changes.x, changes.y, changes.width, changes.height, mask );
         XConfigureWindow( gdi_display, data->client_window, mask, &changes );
+        resize_vk_surfaces( data->hwnd, data->client_window, mask, &changes );
     }
 }
 
@@ -1531,6 +1532,32 @@ Window get_dummy_parent(void)
         XMapWindow( gdi_display, dummy_parent );
     }
     return dummy_parent;
+}
+
+
+/**********************************************************************
+ *		update_client_window
+ */
+void update_client_window( HWND hwnd )
+{
+    struct x11drv_win_data *data;
+    Window old_active;
+
+    if ((data = get_win_data( hwnd )))
+    {
+        old_active = data->client_window;
+        data->client_window = wine_vk_active_surface( hwnd );
+        if (data->client_window && data->whole_window && old_active != data->client_window)
+        {
+            TRACE( "%p reparent xwin %lx/%lx\n", data->hwnd, data->whole_window, data->client_window );
+            XReparentWindow( gdi_display, data->client_window, data->whole_window,
+                     data->client_rect.left - data->whole_rect.left,
+                     data->client_rect.top - data->whole_rect.top );
+        }
+        /* make sure any request that could use old client window has been flushed */
+        XFlush( data->display );
+        release_win_data( data );
+    }
 }
 
 
@@ -1804,6 +1831,17 @@ void X11DRV_SetWindowStyle( HWND hwnd, INT offset, STYLESTRUCT *style )
 {
     struct x11drv_win_data *data;
     DWORD changed = style->styleNew ^ style->styleOld;
+    HWND parent = NtUserGetAncestor( hwnd, GA_PARENT );
+
+    if (offset == GWL_STYLE && (changed & WS_CHILD))
+    {
+        if (NtUserGetWindowRelative( parent, GW_CHILD ) ||
+            NtUserGetAncestor( parent, GA_PARENT ) != NtUserGetDesktopWindow())
+            sync_vk_surface( parent, TRUE );
+        else
+            sync_vk_surface( parent, FALSE );
+        sync_vk_surface( hwnd, style->styleNew & WS_CHILD );
+    }
 
     if (hwnd == NtUserGetDesktopWindow()) return;
     if (!(data = get_win_data( hwnd ))) return;
@@ -1830,6 +1868,11 @@ void X11DRV_DestroyWindow( HWND hwnd )
 {
     struct x11drv_thread_data *thread_data = x11drv_thread_data();
     struct x11drv_win_data *data;
+    HWND parent = NtUserGetAncestor( hwnd, GA_PARENT );
+
+    if (!NtUserGetWindowRelative( parent, GW_CHILD ) &&
+        NtUserGetAncestor( parent, GA_PARENT ) == NtUserGetDesktopWindow())
+        sync_vk_surface( parent, FALSE );
 
     if (!(data = get_win_data( hwnd ))) return;
 
@@ -1844,7 +1887,7 @@ void X11DRV_DestroyWindow( HWND hwnd )
     release_win_data( data );
     free( data );
     destroy_gl_drawable( hwnd );
-    wine_vk_surface_destroy( hwnd );
+    destroy_vk_surface( hwnd );
 }
 
 
@@ -2063,6 +2106,7 @@ static struct x11drv_win_data *X11DRV_create_win_data( HWND hwnd, const RECT *wi
      * that will need clipping support.
      */
     sync_gl_drawable( parent, TRUE );
+    sync_vk_surface( parent, TRUE );
 
     display = thread_init_display();
     init_clip_window();  /* make sure the clip window is initialized in this thread */
@@ -2519,6 +2563,7 @@ done:
      * that will need clipping support.
      */
     sync_gl_drawable( parent, TRUE );
+    sync_vk_surface( parent, TRUE );
 
     fetch_icon_data( hwnd, 0, 0 );
 }

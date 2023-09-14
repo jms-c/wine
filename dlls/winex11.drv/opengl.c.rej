@@ -1,0 +1,20 @@
+diff a/dlls/winex11.drv/opengl.c b/dlls/winex11.drv/opengl.c	(rejected hunks)
+@@ -3321,15 +3321,15 @@ static void X11DRV_WineGL_LoadExtensions(void)
+  */
+ static BOOL WINAPI glxdrv_wglSwapBuffers( HDC hdc )
+ {
+-    struct x11drv_escape_flush_gl_drawable escape;
++    struct x11drv_escape_present_drawable escape;
+     struct gl_drawable *gl;
+     struct wgl_context *ctx = NtCurrentTeb()->glContext;
+     INT64 ust, msc, sbc, target_sbc = 0;
+ 
+     TRACE("(%p)\n", hdc);
+ 
+-    escape.code = X11DRV_FLUSH_GL_DRAWABLE;
+-    escape.gl_drawable = 0;
++    escape.code = X11DRV_PRESENT_DRAWABLE;
++    escape.drawable = 0;
+     escape.flush = !pglXWaitForSbcOML;
+ 
+     if (!(gl = get_gl_drawable( NtUserWindowFromDC( hdc ), hdc )))
