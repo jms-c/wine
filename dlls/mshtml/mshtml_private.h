@@ -405,7 +405,6 @@ typedef struct {
 struct DispatchEx {
     IDispatchEx IDispatchEx_iface;
 
-    IUnknown *outer;
     nsCycleCollectingAutoRefCnt ccref;
 
     dispex_data_t *info;
@@ -433,14 +432,7 @@ extern void (__cdecl *ccp_init)(ExternalCycleCollectionParticipant*,const CCObjC
 extern void (__cdecl *describe_cc_node)(nsCycleCollectingAutoRefCnt*,const char*,nsCycleCollectionTraversalCallback*);
 extern void (__cdecl *note_cc_edge)(nsISupports*,const char*,nsCycleCollectionTraversalCallback*);
 
-static inline LONG dispex_ref_incr(DispatchEx *dispex)
-{
-    return ccref_incr(&dispex->ccref, (nsISupports*)&dispex->IDispatchEx_iface);
-}
-extern LONG dispex_ref_decr(DispatchEx*);
-
-void init_dispatch(DispatchEx*,IUnknown*,dispex_static_data_t*,compat_mode_t);
-BOOL dispex_query_interface(DispatchEx*,REFIID,void**);
+void init_dispatch(DispatchEx*,dispex_static_data_t*,compat_mode_t);
 void dispex_props_unlink(DispatchEx*);
 HRESULT change_type(VARIANT*,VARIANT*,VARTYPE,IServiceProvider*);
 HRESULT dispex_get_dprop_ref(DispatchEx*,const WCHAR*,BOOL,VARIANT**);
@@ -836,8 +828,6 @@ typedef struct {
     HRESULT (*get_name)(HTMLDOMNode*,DISPID,BSTR*);
     HRESULT (*invoke)(HTMLDOMNode*,DISPID,LCID,WORD,DISPPARAMS*,VARIANT*,EXCEPINFO*,IServiceProvider*);
     HRESULT (*bind_to_tree)(HTMLDOMNode*);
-    void (*traverse)(HTMLDOMNode*,nsCycleCollectionTraversalCallback*);
-    void (*unlink)(HTMLDOMNode*);
     BOOL (*is_text_edit)(HTMLDOMNode*);
     BOOL (*is_settable)(HTMLDOMNode*,DISPID);
 } NodeImplVtbl;
@@ -966,8 +956,8 @@ struct HTMLDocumentNode {
 
     nsIDOMDocument *dom_document;
     nsIDOMHTMLDocument *html_document;
-    BOOL content_ready : 1;
-    BOOL unload_sent : 1;
+    unsigned int content_ready : 1;
+    unsigned int unload_sent : 1;
 
     IHTMLDOMImplementation *dom_implementation;
     IHTMLNamespaceCollection *namespaces;
@@ -1209,7 +1199,7 @@ HRESULT create_svg_element(HTMLDocumentNode*,nsIDOMSVGElement*,const WCHAR*,HTML
 void HTMLDOMNode_Init(HTMLDocumentNode*,HTMLDOMNode*,nsIDOMNode*,dispex_static_data_t*);
 void HTMLElement_Init(HTMLElement*,HTMLDocumentNode*,nsIDOMElement*,dispex_static_data_t*);
 
-void EventTarget_Init(EventTarget*,IUnknown*,dispex_static_data_t*,compat_mode_t);
+void EventTarget_Init(EventTarget*,dispex_static_data_t*,compat_mode_t);
 void *EventTarget_query_interface(EventTarget*,REFIID);
 void EventTarget_init_dispex_info(dispex_data_t*,compat_mode_t);
 
@@ -1222,6 +1212,10 @@ void HTMLDOMNode_init_dispex_info(dispex_data_t*,compat_mode_t);
 
 void *HTMLElement_QI(HTMLDOMNode*,REFIID);
 void HTMLElement_destructor(HTMLDOMNode*);
+HRESULT HTMLElement_get_dispid(DispatchEx*,BSTR,DWORD,DISPID*);
+HRESULT HTMLElement_get_name(DispatchEx*,DISPID,BSTR*);
+HRESULT HTMLElement_invoke(DispatchEx*,DISPID,LCID,WORD,DISPPARAMS*,VARIANT*,EXCEPINFO*,IServiceProvider*);
+HRESULT HTMLElement_populate_props(DispatchEx*);
 HRESULT HTMLElement_clone(HTMLDOMNode*,nsIDOMNode*,HTMLDOMNode**);
 HRESULT HTMLElement_get_attr_col(HTMLDOMNode*,HTMLAttributeCollection**);
 HRESULT HTMLElement_handle_event(HTMLDOMNode*,DWORD,nsIDOMEvent*,BOOL*);

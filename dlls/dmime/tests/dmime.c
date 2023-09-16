@@ -705,10 +705,10 @@ static void test_graph(void)
     ok(hr == S_OK, "got %#lx\n", hr);
 
     hr = IDirectMusicGraph_GetTool(graph, 0, NULL);
-    todo_wine ok(hr == E_POINTER, "got %#lx\n", hr);
+    ok(hr == E_POINTER, "got %#lx\n", hr);
     hr = IDirectMusicGraph_GetTool(graph, 0, &tmp_tool);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(tool1 == tmp_tool, "got %p\n", tmp_tool);
+    ok(hr == S_OK, "got %#lx\n", hr);
+    ok(tool1 == tmp_tool, "got %p\n", tmp_tool);
     if (hr == S_OK) IDirectMusicTool_Release(tmp_tool);
     hr = IDirectMusicGraph_GetTool(graph, 1, &tmp_tool);
     ok(hr == S_OK, "got %#lx\n", hr);
@@ -723,40 +723,40 @@ static void test_graph(void)
 
     /* test removing the first tool */
     hr = IDirectMusicGraph_RemoveTool(graph, NULL);
-    todo_wine ok(hr == E_POINTER, "got %#lx\n", hr);
+    ok(hr == E_POINTER, "got %#lx\n", hr);
     hr = IDirectMusicGraph_RemoveTool(graph, tool1);
     ok(hr == S_OK, "got %#lx\n", hr);
     hr = IDirectMusicGraph_RemoveTool(graph, tool1);
-    todo_wine ok(hr == DMUS_E_NOT_FOUND, "got %#lx\n", hr);
+    ok(hr == DMUS_E_NOT_FOUND, "got %#lx\n", hr);
 
     hr = IDirectMusicGraph_GetTool(graph, 0, &tmp_tool);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
+    ok(hr == S_OK, "got %#lx\n", hr);
     ok(tool2 == tmp_tool, "got %p\n", tmp_tool);
     if (hr == S_OK) IDirectMusicTool_Release(tmp_tool);
     hr = IDirectMusicGraph_GetTool(graph, 1, &tmp_tool);
-    todo_wine ok(hr == DMUS_E_NOT_FOUND, "got %#lx\n", hr);
+    ok(hr == DMUS_E_NOT_FOUND, "got %#lx\n", hr);
 
     hr = IDirectMusicGraph_InsertTool(graph, tool1, NULL, 0, -1);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
+    ok(hr == S_OK, "got %#lx\n", hr);
     hr = IDirectMusicGraph_GetTool(graph, 0, &tmp_tool);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(tool1 == tmp_tool, "got %p\n", tmp_tool);
+    ok(hr == S_OK, "got %#lx\n", hr);
+    ok(tool1 == tmp_tool, "got %p\n", tmp_tool);
     if (hr == S_OK) IDirectMusicTool_Release(tmp_tool);
 
 
     /* Test basic IDirectMusicGraph_StampPMsg usage */
     hr = IDirectMusicGraph_StampPMsg(graph, NULL);
-    todo_wine ok(hr == E_POINTER, "got %#lx\n", hr);
+    ok(hr == E_POINTER, "got %#lx\n", hr);
     memset(&msg, 0, sizeof(msg));
     hr = IDirectMusicGraph_StampPMsg(graph, &msg);
     ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(msg.pGraph == graph, "got %p\n", msg.pGraph);
-    todo_wine ok(msg.pTool == tool1, "got %p\n", msg.pTool);
+    ok(msg.pGraph == graph, "got %p\n", msg.pGraph);
+    ok(msg.pTool == tool1, "got %p\n", msg.pTool);
 
     ok(!msg.dwSize, "got %ld\n", msg.dwSize);
     ok(!msg.rtTime, "got %I64d\n", msg.rtTime);
     ok(!msg.mtTime, "got %ld\n", msg.mtTime);
-    todo_wine ok(msg.dwFlags == DMUS_PMSGF_TOOL_IMMEDIATE, "got %#lx\n", msg.dwFlags);
+    ok(msg.dwFlags == DMUS_PMSGF_TOOL_IMMEDIATE, "got %#lx\n", msg.dwFlags);
     ok(!msg.dwPChannel, "got %ld\n", msg.dwPChannel);
     ok(!msg.dwVirtualTrackID, "got %ld\n", msg.dwVirtualTrackID);
     ok(!msg.dwType, "got %#lx\n", msg.dwType);
@@ -766,19 +766,19 @@ static void test_graph(void)
 
     hr = IDirectMusicGraph_StampPMsg(graph, &msg);
     ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(msg.pGraph == graph, "got %p\n", msg.pGraph);
-    todo_wine ok(msg.pTool == tool2, "got %p\n", msg.pTool);
+    ok(msg.pGraph == graph, "got %p\n", msg.pGraph);
+    ok(msg.pTool == tool2, "got %p\n", msg.pTool);
     hr = IDirectMusicGraph_StampPMsg(graph, &msg);
-    todo_wine ok(hr == DMUS_S_LAST_TOOL, "got %#lx\n", hr);
-    todo_wine ok(msg.pGraph == graph, "got %p\n", msg.pGraph);
+    ok(hr == DMUS_S_LAST_TOOL, "got %#lx\n", hr);
+    ok(msg.pGraph == graph, "got %p\n", msg.pGraph);
     ok(!msg.pTool, "got %p\n", msg.pTool);
     hr = IDirectMusicGraph_StampPMsg(graph, &msg);
     ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(msg.pGraph == graph, "got %p\n", msg.pGraph);
-    todo_wine ok(msg.pTool == tool1, "got %p\n", msg.pTool);
-    if (msg.pGraph) IDirectMusicGraph_Release(msg.pGraph);
+    ok(msg.pGraph == graph, "got %p\n", msg.pGraph);
+    ok(msg.pTool == tool1, "got %p\n", msg.pTool);
+    IDirectMusicGraph_Release(msg.pGraph);
     msg.pGraph = NULL;
-    if (msg.pTool) IDirectMusicGraph_Release(msg.pTool);
+    IDirectMusicGraph_Release(msg.pTool);
     msg.pTool = NULL;
 
 
@@ -794,36 +794,36 @@ static void test_graph(void)
     hr = IDirectMusicGraph_StampPMsg(graph, &msg);
     ok(hr == S_OK, "got %#lx\n", hr);
     ok(msg.pGraph == tmp_graph, "got %p\n", msg.pGraph);
-    todo_wine ok(msg.pTool == tool2, "got %p\n", msg.pTool);
-    if (msg.pGraph) IDirectMusicGraph_Release(msg.pGraph);
+    ok(msg.pTool == tool2, "got %p\n", msg.pTool);
+    IDirectMusicGraph_Release(msg.pGraph);
     msg.pGraph = NULL;
 
     msg.pGraph = graph;
     IDirectMusicGraph_AddRef(msg.pGraph);
     hr = IDirectMusicGraph_StampPMsg(tmp_graph, &msg);
-    todo_wine ok(hr == DMUS_S_LAST_TOOL, "got %#lx\n", hr);
+    ok(hr == DMUS_S_LAST_TOOL, "got %#lx\n", hr);
     ok(msg.pGraph == graph, "got %p\n", msg.pGraph);
-    todo_wine ok(msg.pTool == NULL, "got %p\n", msg.pTool);
+    ok(msg.pTool == NULL, "got %p\n", msg.pTool);
 
     msg.pTool = tool2;
     IDirectMusicTool_AddRef(msg.pTool);
     hr = IDirectMusicGraph_InsertTool(tmp_graph, tool1, NULL, 0, 0);
     ok(hr == S_OK, "got %#lx\n", hr);
     hr = IDirectMusicGraph_InsertTool(tmp_graph, tool2, NULL, 0, 0);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
+    ok(hr == S_OK, "got %#lx\n", hr);
     hr = IDirectMusicGraph_StampPMsg(tmp_graph, &msg);
     ok(hr == S_OK, "got %#lx\n", hr);
     ok(msg.pGraph == graph, "got %p\n", msg.pGraph);
-    todo_wine ok(msg.pTool == tool1, "got %p\n", msg.pTool);
-    if (msg.pGraph) IDirectMusicGraph_Release(msg.pGraph);
+    ok(msg.pTool == tool1, "got %p\n", msg.pTool);
+    IDirectMusicGraph_Release(msg.pGraph);
     msg.pGraph = NULL;
 
     hr = IDirectMusicGraph_RemoveTool(graph, tool1);
     ok(hr == S_OK, "got %#lx\n", hr);
     hr = IDirectMusicGraph_StampPMsg(tmp_graph, &msg);
-    todo_wine ok(hr == DMUS_S_LAST_TOOL, "got %#lx\n", hr);
+    ok(hr == DMUS_S_LAST_TOOL, "got %#lx\n", hr);
     ok(msg.pGraph == NULL, "got %p\n", msg.pGraph);
-    todo_wine ok(msg.pTool == NULL, "got %p\n", msg.pTool);
+    ok(msg.pTool == NULL, "got %p\n", msg.pTool);
 
     IDirectMusicGraph_Release(tmp_graph);
 
@@ -1497,12 +1497,12 @@ static void test_performance_tool(void)
     ok(hr == E_NOTIMPL, "got %#lx\n", hr);
     value = 0xdeadbeef;
     hr = IDirectMusicTool_GetMsgDeliveryType(tool, &value);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(value == DMUS_PMSGF_TOOL_IMMEDIATE, "got %#lx\n", value);
+    ok(hr == S_OK, "got %#lx\n", hr);
+    ok(value == DMUS_PMSGF_TOOL_IMMEDIATE, "got %#lx\n", value);
     value = 0xdeadbeef;
     hr = IDirectMusicTool_GetMediaTypeArraySize(tool, &value);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(value == 0, "got %#lx\n", value);
+    ok(hr == S_OK, "got %#lx\n", hr);
+    ok(value == 0, "got %#lx\n", value);
     hr = IDirectMusicTool_GetMediaTypes(tool, (DWORD **)&types, 64);
     ok(hr == E_NOTIMPL, "got %#lx\n", hr);
     hr = IDirectMusicTool_ProcessPMsg(tool, performance, &msg);
@@ -1544,18 +1544,18 @@ static void test_performance_graph(void)
 
     /* test IDirectMusicGraph_StampPMsg usage */
     hr = IDirectMusicGraph_StampPMsg(graph, NULL);
-    todo_wine ok(hr == E_POINTER, "got %#lx\n", hr);
+    ok(hr == E_POINTER, "got %#lx\n", hr);
     memset(&msg, 0, sizeof(msg));
     hr = IDirectMusicGraph_StampPMsg(graph, &msg);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
+    ok(hr == S_OK, "got %#lx\n", hr);
     ok(msg.pGraph == NULL, "got %p\n", msg.pGraph);
-    todo_wine ok(msg.pTool != NULL, "got %p\n", msg.pTool);
-    if (msg.pTool) check_interface(msg.pTool, &IID_IDirectMusicPerformance, TRUE);
+    ok(msg.pTool != NULL, "got %p\n", msg.pTool);
+    check_interface(msg.pTool, &IID_IDirectMusicPerformance, TRUE);
 
     ok(!msg.dwSize, "got %ld\n", msg.dwSize);
     ok(!msg.rtTime, "got %I64d\n", msg.rtTime);
     ok(!msg.mtTime, "got %ld\n", msg.mtTime);
-    todo_wine ok(msg.dwFlags == DMUS_PMSGF_TOOL_QUEUE, "got %#lx\n", msg.dwFlags);
+    ok(msg.dwFlags == DMUS_PMSGF_TOOL_QUEUE, "got %#lx\n", msg.dwFlags);
     ok(!msg.dwPChannel, "got %ld\n", msg.dwPChannel);
     ok(!msg.dwVirtualTrackID, "got %ld\n", msg.dwVirtualTrackID);
     ok(!msg.dwType, "got %#lx\n", msg.dwType);
@@ -1564,12 +1564,12 @@ static void test_performance_graph(void)
     ok(!msg.punkUser, "got %p\n", msg.punkUser);
 
     hr = IDirectMusicGraph_StampPMsg(graph, &msg);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
+    ok(hr == S_OK, "got %#lx\n", hr);
     ok(msg.pGraph == NULL, "got %p\n", msg.pGraph);
-    todo_wine ok(msg.pTool != NULL, "got %p\n", msg.pTool);
-    if (msg.pTool) check_interface(msg.pTool, &IID_IDirectMusicPerformance, TRUE);
+    ok(msg.pTool != NULL, "got %p\n", msg.pTool);
+    check_interface(msg.pTool, &IID_IDirectMusicPerformance, TRUE);
 
-    if (msg.pTool) IDirectMusicTool_Release(msg.pTool);
+    IDirectMusicTool_Release(msg.pTool);
     msg.pTool = NULL;
 
     IDirectMusicGraph_Release(graph);
@@ -1604,14 +1604,14 @@ static void test_performance_graph(void)
 
     memset(&msg, 0, sizeof(msg));
     hr = IDirectMusicGraph_StampPMsg(graph, &msg);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(msg.pGraph == graph, "got %p\n", msg.pGraph);
-    todo_wine ok(msg.pTool == tool, "got %p\n", msg.pTool);
+    ok(hr == S_OK, "got %#lx\n", hr);
+    ok(msg.pGraph == graph, "got %p\n", msg.pGraph);
+    ok(msg.pTool == tool, "got %p\n", msg.pTool);
 
     ok(!msg.dwSize, "got %ld\n", msg.dwSize);
     ok(!msg.rtTime, "got %I64d\n", msg.rtTime);
     ok(!msg.mtTime, "got %ld\n", msg.mtTime);
-    todo_wine ok(msg.dwFlags == DMUS_PMSGF_TOOL_IMMEDIATE, "got %#lx\n", msg.dwFlags);
+    ok(msg.dwFlags == DMUS_PMSGF_TOOL_IMMEDIATE, "got %#lx\n", msg.dwFlags);
     ok(!msg.dwPChannel, "got %ld\n", msg.dwPChannel);
     ok(!msg.dwVirtualTrackID, "got %ld\n", msg.dwVirtualTrackID);
     ok(!msg.dwType, "got %#lx\n", msg.dwType);
@@ -1620,12 +1620,12 @@ static void test_performance_graph(void)
     ok(!msg.punkUser, "got %p\n", msg.punkUser);
 
     hr = IDirectMusicGraph_StampPMsg(graph, &msg);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
+    ok(hr == S_OK, "got %#lx\n", hr);
     ok(msg.pGraph == NULL, "got %p\n", msg.pGraph);
-    todo_wine ok(msg.pTool != NULL, "got %p\n", msg.pTool);
-    if (msg.pTool) check_interface(msg.pTool, &IID_IDirectMusicPerformance, TRUE);
+    ok(msg.pTool != NULL, "got %p\n", msg.pTool);
+    check_interface(msg.pTool, &IID_IDirectMusicPerformance, TRUE);
 
-    if (msg.pTool) IDirectMusicTool_Release(msg.pTool);
+    IDirectMusicTool_Release(msg.pTool);
     msg.pTool = NULL;
 
     IDirectMusicGraph_Release(graph);
@@ -1650,18 +1650,18 @@ static void test_performance_time(void)
 
 
     hr = IDirectMusicPerformance_MusicToReferenceTime(performance, 0, NULL);
-    todo_wine ok(hr == E_POINTER, "got %#lx\n", hr);
+    ok(hr == E_POINTER, "got %#lx\n", hr);
     time = 0xdeadbeef;
     hr = IDirectMusicPerformance_MusicToReferenceTime(performance, 0, &time);
-    todo_wine ok(hr == DMUS_E_NO_MASTER_CLOCK, "got %#lx\n", hr);
-    todo_wine ok(time == 0, "got %I64d\n", time);
+    ok(hr == DMUS_E_NO_MASTER_CLOCK, "got %#lx\n", hr);
+    ok(time == 0, "got %I64d\n", time);
 
     hr = IDirectMusicPerformance_ReferenceToMusicTime(performance, 0, NULL);
-    todo_wine ok(hr == E_POINTER, "got %#lx\n", hr);
+    ok(hr == E_POINTER, "got %#lx\n", hr);
     music_time = 0xdeadbeef;
     hr = IDirectMusicPerformance_ReferenceToMusicTime(performance, 0, &music_time);
-    todo_wine ok(hr == DMUS_E_NO_MASTER_CLOCK, "got %#lx\n", hr);
-    todo_wine ok(music_time == 0, "got %ld\n", music_time);
+    ok(hr == DMUS_E_NO_MASTER_CLOCK, "got %#lx\n", hr);
+    ok(music_time == 0, "got %ld\n", music_time);
 
 
     dmusic = NULL;
@@ -1684,38 +1684,38 @@ static void test_performance_time(void)
     time = 0xdeadbeef;
     hr = IDirectMusicPerformance_MusicToReferenceTime(performance, 1, &time);
     ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(time - init_time >= 6505, "got %I64d\n", time - init_time);
+    ok(time - init_time >= 6505, "got %I64d\n", time - init_time);
     ok(time - init_time <= 6515, "got %I64d\n", time - init_time);
     time = 0xdeadbeef;
     hr = IDirectMusicPerformance_MusicToReferenceTime(performance, 1000, &time);
     ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(time - init_time >= 1000 * 6505, "got %I64d\n", time - init_time);
+    ok(time - init_time >= 1000 * 6505, "got %I64d\n", time - init_time);
     ok(time - init_time <= 1000 * 6515, "got %I64d\n", time - init_time);
     time = 0xdeadbeef;
     hr = IDirectMusicPerformance_MusicToReferenceTime(performance, 2000, &time);
     ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(time - init_time >= 2000 * 6505, "got %I64d\n", time - init_time);
+    ok(time - init_time >= 2000 * 6505, "got %I64d\n", time - init_time);
     ok(time - init_time <= 2000 * 6515, "got %I64d\n", time - init_time);
 
     music_time = 0xdeadbeef;
     hr = IDirectMusicPerformance_ReferenceToMusicTime(performance, init_time, &music_time);
     ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(music_time == 0, "got %ld\n", music_time);
+    ok(music_time == 0, "got %ld\n", music_time);
     music_time = 0xdeadbeef;
     hr = IDirectMusicPerformance_ReferenceToMusicTime(performance, init_time + 1000 * 6510, &music_time);
     ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(music_time == 1000, "got %ld\n", music_time);
+    ok(music_time == 1000, "got %ld\n", music_time);
     music_time = 0xdeadbeef;
     hr = IDirectMusicPerformance_ReferenceToMusicTime(performance, init_time + 2000 * 6510, &music_time);
     ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(music_time == 2000, "got %ld\n", music_time);
+    ok(music_time == 2000, "got %ld\n", music_time);
 
     time = 0xdeadbeef;
     music_time = 0xdeadbeef;
     hr = IDirectMusicPerformance_GetTime(performance, &time, &music_time);
     ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(time - init_time <= 200 * 10000, "got %I64d\n", time - init_time);
-    todo_wine ok(music_time == (time - init_time) / 6510, "got %ld\n", music_time);
+    ok(time - init_time <= 200 * 10000, "got %I64d\n", time - init_time);
+    ok(music_time == (time - init_time) / 6510, "got %ld\n", music_time);
 
 
     hr = IDirectMusicPerformance_CloseDown(performance);
@@ -1747,7 +1747,7 @@ static void test_performance_pmsg(void)
 
 
     hr = IDirectMusicPerformance_AllocPMsg(performance, 0, NULL);
-    todo_wine ok(hr == E_POINTER, "got %#lx\n", hr);
+    ok(hr == E_POINTER, "got %#lx\n", hr);
     hr = IDirectMusicPerformance_AllocPMsg(performance, sizeof(DMUS_PMSG) - 1, &msg);
     ok(hr == E_INVALIDARG, "got %#lx\n", hr);
 
@@ -1767,12 +1767,12 @@ static void test_performance_pmsg(void)
     hr = IDirectMusicPerformance_SendPMsg(performance, NULL);
     ok(hr == E_POINTER, "got %#lx\n", hr);
     hr = IDirectMusicPerformance_SendPMsg(performance, msg);
-    todo_wine ok(hr == DMUS_E_NO_MASTER_CLOCK, "got %#lx\n", hr);
+    ok(hr == DMUS_E_NO_MASTER_CLOCK, "got %#lx\n", hr);
 
     hr = IDirectMusicPerformance_FreePMsg(performance, NULL);
     ok(hr == E_POINTER, "got %#lx\n", hr);
     hr = IDirectMusicPerformance_FreePMsg(performance, msg);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
+    ok(hr == S_OK, "got %#lx\n", hr);
 
 
     hr = IDirectMusicPerformance_Init(performance, NULL, 0, 0);
@@ -1802,28 +1802,27 @@ static void test_performance_pmsg(void)
     ok(!msg->dwGroupID, "got %ld\n", msg->dwGroupID);
     ok(!msg->punkUser, "got %p\n", msg->punkUser);
     hr = IDirectMusicPerformance_SendPMsg(performance, msg);
-    todo_wine ok(hr == E_INVALIDARG, "got %#lx\n", hr);
+    ok(hr == E_INVALIDARG, "got %#lx\n", hr);
 
     hr = IDirectMusicPerformance8_ClonePMsg((IDirectMusicPerformance8 *)performance, msg, NULL);
-    todo_wine ok(hr == E_POINTER, "got %#lx\n", hr);
+    ok(hr == E_POINTER, "got %#lx\n", hr);
     hr = IDirectMusicPerformance8_ClonePMsg((IDirectMusicPerformance8 *)performance, NULL, &clone);
-    todo_wine ok(hr == E_POINTER, "got %#lx\n", hr);
+    ok(hr == E_POINTER, "got %#lx\n", hr);
     clone = NULL;
     hr = IDirectMusicPerformance8_ClonePMsg((IDirectMusicPerformance8 *)performance, msg, &clone);
     ok(hr == S_OK, "got %#lx\n", hr);
-    todo_wine ok(clone != NULL, "got %p\n", clone);
+    ok(clone != NULL, "got %p\n", clone);
 
     msg->mtTime = 500;
     msg->dwFlags = DMUS_PMSGF_MUSICTIME;
     hr = IDirectMusicPerformance_SendPMsg(performance, msg);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
+    ok(hr == S_OK, "got %#lx\n", hr);
     hr = IDirectMusicPerformance_SendPMsg(performance, msg);
     ok(hr == DMUS_E_ALREADY_SENT, "got %#lx\n", hr);
     hr = IDirectMusicPerformance_FreePMsg(performance, msg);
     ok(hr == DMUS_E_CANNOT_FREE, "got %#lx\n", hr);
 
-    if (!clone) hr = S_OK;
-    else hr = IDirectMusicPerformance_FreePMsg(performance, clone);
+    hr = IDirectMusicPerformance_FreePMsg(performance, clone);
     ok(hr == S_OK, "got %#lx\n", hr);
 
 
@@ -1871,7 +1870,7 @@ static void test_performance_pmsg(void)
     hr = IDirectMusicPerformance_QueryInterface(performance, &IID_IDirectMusicGraph, (void **)&graph);
     ok(hr == S_OK, "got %#lx\n", hr);
     hr = IDirectMusicGraph_StampPMsg(graph, msg);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
+    ok(hr == S_OK, "got %#lx\n", hr);
     IDirectMusicGraph_Release(graph);
 
     hr = IDirectMusicPerformance_SendPMsg(performance, msg);
@@ -1901,7 +1900,7 @@ static void test_performance_pmsg(void)
         hr = IDirectMusicPerformance_QueryInterface(performance, &IID_IDirectMusicGraph, (void **)&graph);
         ok(hr == S_OK, "got %#lx\n", hr);
         hr = IDirectMusicGraph_StampPMsg(graph, msg);
-        todo_wine ok(hr == S_OK, "got %#lx\n", hr);
+        ok(hr == S_OK, "got %#lx\n", hr);
         IDirectMusicGraph_Release(graph);
 
         msg->dwFlags &= ~(DMUS_PMSGF_TOOL_IMMEDIATE | DMUS_PMSGF_TOOL_QUEUE | DMUS_PMSGF_TOOL_ATTIME);

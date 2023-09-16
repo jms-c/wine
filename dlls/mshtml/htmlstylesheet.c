@@ -78,33 +78,19 @@ static HRESULT WINAPI HTMLStyleSheetRule_QueryInterface(IHTMLStyleSheetRule *ifa
         REFIID riid, void **ppv)
 {
     HTMLStyleSheetRule *This = impl_from_IHTMLStyleSheetRule(iface);
-
-    if(dispex_query_interface(&This->dispex, riid, ppv))
-        return *ppv ? S_OK : E_NOINTERFACE;
-
-    *ppv = NULL;
-    WARN("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-    return E_NOINTERFACE;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLStyleSheetRule_AddRef(IHTMLStyleSheetRule *iface)
 {
     HTMLStyleSheetRule *This = impl_from_IHTMLStyleSheetRule(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLStyleSheetRule_Release(IHTMLStyleSheetRule *iface)
 {
     HTMLStyleSheetRule *This = impl_from_IHTMLStyleSheetRule(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLStyleSheetRule_GetTypeInfoCount(
@@ -244,8 +230,7 @@ static HRESULT create_style_sheet_rule(nsIDOMCSSRule *nsstylesheetrule, compat_m
     rule->IHTMLStyleSheetRule_iface.lpVtbl = &HTMLStyleSheetRuleVtbl;
     rule->nsstylesheetrule = NULL;
 
-    init_dispatch(&rule->dispex, (IUnknown *)&rule->IHTMLStyleSheetRule_iface, &HTMLStyleSheetRule_dispex,
-                  compat_mode);
+    init_dispatch(&rule->dispex, &HTMLStyleSheetRule_dispex, compat_mode);
 
     if (nsstylesheetrule)
     {
@@ -268,33 +253,19 @@ static HRESULT WINAPI HTMLStyleSheetRulesCollection_QueryInterface(IHTMLStyleShe
         REFIID riid, void **ppv)
 {
     HTMLStyleSheetRulesCollection *This = impl_from_IHTMLStyleSheetRulesCollection(iface);
-
-    if(dispex_query_interface(&This->dispex, riid, ppv))
-        return *ppv ? S_OK : E_NOINTERFACE;
-
-    *ppv = NULL;
-    WARN("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-    return E_NOINTERFACE;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLStyleSheetRulesCollection_AddRef(IHTMLStyleSheetRulesCollection *iface)
 {
     HTMLStyleSheetRulesCollection *This = impl_from_IHTMLStyleSheetRulesCollection(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLStyleSheetRulesCollection_Release(IHTMLStyleSheetRulesCollection *iface)
 {
     HTMLStyleSheetRulesCollection *This = impl_from_IHTMLStyleSheetRulesCollection(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLStyleSheetRulesCollection_GetTypeInfoCount(
@@ -522,8 +493,7 @@ static HRESULT create_style_sheet_rules_collection(nsIDOMCSSRuleList *nslist, co
     collection->IHTMLStyleSheetRulesCollection_iface.lpVtbl = &HTMLStyleSheetRulesCollectionVtbl;
     collection->nslist = nslist;
 
-    init_dispatch(&collection->dispex, (IUnknown*)&collection->IHTMLStyleSheetRulesCollection_iface,
-                  &HTMLStyleSheetRulesCollection_dispex, compat_mode);
+    init_dispatch(&collection->dispex, &HTMLStyleSheetRulesCollection_dispex, compat_mode);
 
     if(nslist)
         nsIDOMCSSRuleList_AddRef(nslist);
@@ -665,33 +635,19 @@ static HRESULT WINAPI HTMLStyleSheetsCollection_QueryInterface(IHTMLStyleSheetsC
          REFIID riid, void **ppv)
 {
     HTMLStyleSheetsCollection *This = impl_from_IHTMLStyleSheetsCollection(iface);
-
-    if(dispex_query_interface(&This->dispex, riid, ppv))
-        return *ppv ? S_OK : E_NOINTERFACE;
-
-    *ppv = NULL;
-    WARN("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-    return E_NOINTERFACE;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLStyleSheetsCollection_AddRef(IHTMLStyleSheetsCollection *iface)
 {
     HTMLStyleSheetsCollection *This = impl_from_IHTMLStyleSheetsCollection(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLStyleSheetsCollection_Release(IHTMLStyleSheetsCollection *iface)
 {
     HTMLStyleSheetsCollection *This = impl_from_IHTMLStyleSheetsCollection(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLStyleSheetsCollection_GetTypeInfoCount(IHTMLStyleSheetsCollection *iface,
@@ -964,8 +920,7 @@ HRESULT create_style_sheet_collection(nsIDOMStyleSheetList *nslist, compat_mode_
         nsIDOMStyleSheetList_AddRef(nslist);
     collection->nslist = nslist;
 
-    init_dispatch(&collection->dispex, (IUnknown*)&collection->IHTMLStyleSheetsCollection_iface,
-                  &HTMLStyleSheetsCollection_dispex, compat_mode);
+    init_dispatch(&collection->dispex, &HTMLStyleSheetsCollection_dispex, compat_mode);
 
     *ret = &collection->IHTMLStyleSheetsCollection_iface;
     return S_OK;
@@ -979,33 +934,19 @@ static inline HTMLStyleSheet *impl_from_IHTMLStyleSheet(IHTMLStyleSheet *iface)
 static HRESULT WINAPI HTMLStyleSheet_QueryInterface(IHTMLStyleSheet *iface, REFIID riid, void **ppv)
 {
     HTMLStyleSheet *This = impl_from_IHTMLStyleSheet(iface);
-
-    if(dispex_query_interface(&This->dispex, riid, ppv))
-        return *ppv ? S_OK : E_NOINTERFACE;
-
-    *ppv = NULL;
-    WARN("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-    return E_NOINTERFACE;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLStyleSheet_AddRef(IHTMLStyleSheet *iface)
 {
     HTMLStyleSheet *This = impl_from_IHTMLStyleSheet(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLStyleSheet_Release(IHTMLStyleSheet *iface)
 {
     HTMLStyleSheet *This = impl_from_IHTMLStyleSheet(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLStyleSheet_GetTypeInfoCount(IHTMLStyleSheet *iface, UINT *pctinfo)
@@ -1554,8 +1495,7 @@ HRESULT create_style_sheet(nsIDOMStyleSheet *nsstylesheet, compat_mode_t compat_
     style_sheet->IHTMLStyleSheet4_iface.lpVtbl = &HTMLStyleSheet4Vtbl;
     style_sheet->nsstylesheet = NULL;
 
-    init_dispatch(&style_sheet->dispex, (IUnknown*)&style_sheet->IHTMLStyleSheet_iface,
-                  &HTMLStyleSheet_dispex, compat_mode);
+    init_dispatch(&style_sheet->dispex, &HTMLStyleSheet_dispex, compat_mode);
 
     if(nsstylesheet) {
         nsres = nsIDOMStyleSheet_QueryInterface(nsstylesheet, &IID_nsIDOMCSSStyleSheet,

@@ -59,33 +59,19 @@ static inline HTMLDOMImplementation *impl_from_IHTMLDOMImplementation(IHTMLDOMIm
 static HRESULT WINAPI HTMLDOMImplementation_QueryInterface(IHTMLDOMImplementation *iface, REFIID riid, void **ppv)
 {
     HTMLDOMImplementation *This = impl_from_IHTMLDOMImplementation(iface);
-
-    if(dispex_query_interface(&This->dispex, riid, ppv))
-        return *ppv ? S_OK : E_NOINTERFACE;
-
-    *ppv = NULL;
-    WARN("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-    return E_NOINTERFACE;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLDOMImplementation_AddRef(IHTMLDOMImplementation *iface)
 {
     HTMLDOMImplementation *This = impl_from_IHTMLDOMImplementation(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLDOMImplementation_Release(IHTMLDOMImplementation *iface)
 {
     HTMLDOMImplementation *This = impl_from_IHTMLDOMImplementation(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLDOMImplementation_GetTypeInfoCount(IHTMLDOMImplementation *iface, UINT *pctinfo)
@@ -350,8 +336,7 @@ HRESULT create_dom_implementation(HTMLDocumentNode *doc_node, IHTMLDOMImplementa
     dom_implementation->IHTMLDOMImplementation2_iface.lpVtbl = &HTMLDOMImplementation2Vtbl;
     dom_implementation->browser = doc_node->browser;
 
-    init_dispatch(&dom_implementation->dispex, (IUnknown*)&dom_implementation->IHTMLDOMImplementation_iface,
-                  &HTMLDOMImplementation_dispex, doc_node->document_mode);
+    init_dispatch(&dom_implementation->dispex, &HTMLDOMImplementation_dispex, doc_node->document_mode);
 
     nsres = nsIDOMDocument_GetImplementation(doc_node->dom_document, &dom_implementation->implementation);
     if(NS_FAILED(nsres)) {
@@ -383,33 +368,19 @@ static inline HTMLScreen *impl_from_IHTMLScreen(IHTMLScreen *iface)
 static HRESULT WINAPI HTMLScreen_QueryInterface(IHTMLScreen *iface, REFIID riid, void **ppv)
 {
     HTMLScreen *This = impl_from_IHTMLScreen(iface);
-
-    if(dispex_query_interface(&This->dispex, riid, ppv))
-        return *ppv ? S_OK : E_NOINTERFACE;
-
-    *ppv = NULL;
-    WARN("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-    return E_NOINTERFACE;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLScreen_AddRef(IHTMLScreen *iface)
 {
     HTMLScreen *This = impl_from_IHTMLScreen(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLScreen_Release(IHTMLScreen *iface)
 {
     HTMLScreen *This = impl_from_IHTMLScreen(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLScreen_GetTypeInfoCount(IHTMLScreen *iface, UINT *pctinfo)
@@ -604,7 +575,7 @@ HRESULT create_html_screen(compat_mode_t compat_mode, IHTMLScreen **ret)
 
     screen->IHTMLScreen_iface.lpVtbl = &HTMLSreenVtbl;
 
-    init_dispatch(&screen->dispex, (IUnknown*)&screen->IHTMLScreen_iface, &HTMLScreen_dispex, compat_mode);
+    init_dispatch(&screen->dispex, &HTMLScreen_dispex, compat_mode);
 
     *ret = &screen->IHTMLScreen_iface;
     return S_OK;
@@ -618,43 +589,19 @@ static inline OmHistory *impl_from_IOmHistory(IOmHistory *iface)
 static HRESULT WINAPI OmHistory_QueryInterface(IOmHistory *iface, REFIID riid, void **ppv)
 {
     OmHistory *This = impl_from_IOmHistory(iface);
-
-    TRACE("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-
-    if(IsEqualGUID(&IID_IUnknown, riid)) {
-        *ppv = &This->IOmHistory_iface;
-    }else if(IsEqualGUID(&IID_IOmHistory, riid)) {
-        *ppv = &This->IOmHistory_iface;
-    }else if(dispex_query_interface(&This->dispex, riid, ppv)) {
-        return *ppv ? S_OK : E_NOINTERFACE;
-    }else {
-        WARN("Unsupported interface %s\n", debugstr_mshtml_guid(riid));
-        *ppv = NULL;
-        return E_NOINTERFACE;
-    }
-
-    IUnknown_AddRef((IUnknown*)*ppv);
-    return S_OK;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI OmHistory_AddRef(IOmHistory *iface)
 {
     OmHistory *This = impl_from_IOmHistory(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI OmHistory_Release(IOmHistory *iface)
 {
     OmHistory *This = impl_from_IOmHistory(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI OmHistory_GetTypeInfoCount(IOmHistory *iface, UINT *pctinfo)
@@ -746,6 +693,16 @@ static inline OmHistory *OmHistory_from_DispatchEx(DispatchEx *iface)
     return CONTAINING_RECORD(iface, OmHistory, dispex);
 }
 
+static void *OmHistory_query_interface(DispatchEx *dispex, REFIID riid)
+{
+    OmHistory *This = OmHistory_from_DispatchEx(dispex);
+
+    if(IsEqualGUID(&IID_IOmHistory, riid))
+        return &This->IOmHistory_iface;
+
+    return NULL;
+}
+
 static void OmHistory_destructor(DispatchEx *dispex)
 {
     OmHistory *This = OmHistory_from_DispatchEx(dispex);
@@ -753,6 +710,7 @@ static void OmHistory_destructor(DispatchEx *dispex)
 }
 
 static const dispex_static_data_vtbl_t OmHistory_dispex_vtbl = {
+    .query_interface  = OmHistory_query_interface,
     .destructor       = OmHistory_destructor,
 };
 
@@ -776,8 +734,7 @@ HRESULT create_history(HTMLInnerWindow *window, OmHistory **ret)
     if(!history)
         return E_OUTOFMEMORY;
 
-    init_dispatch(&history->dispex, (IUnknown*)&history->IOmHistory_iface, &OmHistory_dispex,
-                  dispex_compat_mode(&window->event_target.dispex));
+    init_dispatch(&history->dispex, &OmHistory_dispex, dispex_compat_mode(&window->event_target.dispex));
     history->IOmHistory_iface.lpVtbl = &OmHistoryVtbl;
 
     history->window = window;
@@ -801,33 +758,19 @@ static inline HTMLPluginsCollection *impl_from_IHTMLPluginsCollection(IHTMLPlugi
 static HRESULT WINAPI HTMLPluginsCollection_QueryInterface(IHTMLPluginsCollection *iface, REFIID riid, void **ppv)
 {
     HTMLPluginsCollection *This = impl_from_IHTMLPluginsCollection(iface);
-
-    if(dispex_query_interface(&This->dispex, riid, ppv))
-        return *ppv ? S_OK : E_NOINTERFACE;
-
-    *ppv = NULL;
-    WARN("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-    return E_NOINTERFACE;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLPluginsCollection_AddRef(IHTMLPluginsCollection *iface)
 {
     HTMLPluginsCollection *This = impl_from_IHTMLPluginsCollection(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLPluginsCollection_Release(IHTMLPluginsCollection *iface)
 {
     HTMLPluginsCollection *This = impl_from_IHTMLPluginsCollection(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLPluginsCollection_GetTypeInfoCount(IHTMLPluginsCollection *iface, UINT *pctinfo)
@@ -951,8 +894,7 @@ static HRESULT create_plugins_collection(OmNavigator *navigator, HTMLPluginsColl
     col->IHTMLPluginsCollection_iface.lpVtbl = &HTMLPluginsCollectionVtbl;
     col->navigator = navigator;
 
-    init_dispatch(&col->dispex, (IUnknown*)&col->IHTMLPluginsCollection_iface,
-                  &HTMLPluginsCollection_dispex, dispex_compat_mode(&navigator->dispex));
+    init_dispatch(&col->dispex, &HTMLPluginsCollection_dispex, dispex_compat_mode(&navigator->dispex));
 
     *ret = col;
     return S_OK;
@@ -973,33 +915,19 @@ static inline HTMLMimeTypesCollection *impl_from_IHTMLMimeTypesCollection(IHTMLM
 static HRESULT WINAPI HTMLMimeTypesCollection_QueryInterface(IHTMLMimeTypesCollection *iface, REFIID riid, void **ppv)
 {
     HTMLMimeTypesCollection *This = impl_from_IHTMLMimeTypesCollection(iface);
-
-    if(dispex_query_interface(&This->dispex, riid, ppv))
-        return *ppv ? S_OK : E_NOINTERFACE;
-
-    *ppv = NULL;
-    WARN("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-    return E_NOINTERFACE;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLMimeTypesCollection_AddRef(IHTMLMimeTypesCollection *iface)
 {
     HTMLMimeTypesCollection *This = impl_from_IHTMLMimeTypesCollection(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLMimeTypesCollection_Release(IHTMLMimeTypesCollection *iface)
 {
     HTMLMimeTypesCollection *This = impl_from_IHTMLMimeTypesCollection(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLMimeTypesCollection_GetTypeInfoCount(IHTMLMimeTypesCollection *iface, UINT *pctinfo)
@@ -1112,8 +1040,7 @@ static HRESULT create_mime_types_collection(OmNavigator *navigator, HTMLMimeType
     col->IHTMLMimeTypesCollection_iface.lpVtbl = &HTMLMimeTypesCollectionVtbl;
     col->navigator = navigator;
 
-    init_dispatch(&col->dispex, (IUnknown*)&col->IHTMLMimeTypesCollection_iface,
-                  &HTMLMimeTypesCollection_dispex, dispex_compat_mode(&navigator->dispex));
+    init_dispatch(&col->dispex, &HTMLMimeTypesCollection_dispex, dispex_compat_mode(&navigator->dispex));
 
     *ret = col;
     return S_OK;
@@ -1127,43 +1054,19 @@ static inline OmNavigator *impl_from_IOmNavigator(IOmNavigator *iface)
 static HRESULT WINAPI OmNavigator_QueryInterface(IOmNavigator *iface, REFIID riid, void **ppv)
 {
     OmNavigator *This = impl_from_IOmNavigator(iface);
-
-    TRACE("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-
-    if(IsEqualGUID(&IID_IUnknown, riid)) {
-        *ppv = &This->IOmNavigator_iface;
-    }else if(IsEqualGUID(&IID_IOmNavigator, riid)) {
-        *ppv = &This->IOmNavigator_iface;
-    }else if(dispex_query_interface(&This->dispex, riid, ppv)) {
-        return *ppv ? S_OK : E_NOINTERFACE;
-    }else {
-        WARN("Unsupported interface %s\n", debugstr_mshtml_guid(riid));
-        *ppv = NULL;
-        return E_NOINTERFACE;
-    }
-
-    IUnknown_AddRef((IUnknown*)*ppv);
-    return S_OK;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI OmNavigator_AddRef(IOmNavigator *iface)
 {
     OmNavigator *This = impl_from_IOmNavigator(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI OmNavigator_Release(IOmNavigator *iface)
 {
     OmNavigator *This = impl_from_IOmNavigator(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI OmNavigator_GetTypeInfoCount(IOmNavigator *iface, UINT *pctinfo)
@@ -1513,6 +1416,16 @@ static inline OmNavigator *OmNavigator_from_DispatchEx(DispatchEx *iface)
     return CONTAINING_RECORD(iface, OmNavigator, dispex);
 }
 
+static void *OmNavigator_query_interface(DispatchEx *dispex, REFIID riid)
+{
+    OmNavigator *This = OmNavigator_from_DispatchEx(dispex);
+
+    if(IsEqualGUID(&IID_IOmNavigator, riid))
+        return &This->IOmNavigator_iface;
+
+    return NULL;
+}
+
 static void OmNavigator_unlink(DispatchEx *dispex)
 {
     OmNavigator *This = OmNavigator_from_DispatchEx(dispex);
@@ -1533,6 +1446,7 @@ static void OmNavigator_destructor(DispatchEx *dispex)
 }
 
 static const dispex_static_data_vtbl_t OmNavigator_dispex_vtbl = {
+    .query_interface  = OmNavigator_query_interface,
     .destructor       = OmNavigator_destructor,
     .unlink           = OmNavigator_unlink
 };
@@ -1558,7 +1472,7 @@ HRESULT create_navigator(compat_mode_t compat_mode, IOmNavigator **navigator)
 
     ret->IOmNavigator_iface.lpVtbl = &OmNavigatorVtbl;
 
-    init_dispatch(&ret->dispex, (IUnknown*)&ret->IOmNavigator_iface, &OmNavigator_dispex, compat_mode);
+    init_dispatch(&ret->dispex, &OmNavigator_dispex, compat_mode);
 
     *navigator = &ret->IOmNavigator_iface;
     return S_OK;
@@ -1579,43 +1493,19 @@ static inline HTMLPerformanceTiming *impl_from_IHTMLPerformanceTiming(IHTMLPerfo
 static HRESULT WINAPI HTMLPerformanceTiming_QueryInterface(IHTMLPerformanceTiming *iface, REFIID riid, void **ppv)
 {
     HTMLPerformanceTiming *This = impl_from_IHTMLPerformanceTiming(iface);
-
-    TRACE("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-
-    if(IsEqualGUID(&IID_IUnknown, riid)) {
-        *ppv = &This->IHTMLPerformanceTiming_iface;
-    }else if(IsEqualGUID(&IID_IHTMLPerformanceTiming, riid)) {
-        *ppv = &This->IHTMLPerformanceTiming_iface;
-    }else if(dispex_query_interface(&This->dispex, riid, ppv)) {
-        return *ppv ? S_OK : E_NOINTERFACE;
-    }else {
-        WARN("Unsupported interface %s\n", debugstr_mshtml_guid(riid));
-        *ppv = NULL;
-        return E_NOINTERFACE;
-    }
-
-    IUnknown_AddRef((IUnknown*)*ppv);
-    return S_OK;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLPerformanceTiming_AddRef(IHTMLPerformanceTiming *iface)
 {
     HTMLPerformanceTiming *This = impl_from_IHTMLPerformanceTiming(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLPerformanceTiming_Release(IHTMLPerformanceTiming *iface)
 {
     HTMLPerformanceTiming *This = impl_from_IHTMLPerformanceTiming(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLPerformanceTiming_GetTypeInfoCount(IHTMLPerformanceTiming *iface, UINT *pctinfo)
@@ -1944,6 +1834,16 @@ static inline HTMLPerformanceTiming *HTMLPerformanceTiming_from_DispatchEx(Dispa
     return CONTAINING_RECORD(iface, HTMLPerformanceTiming, dispex);
 }
 
+static void *HTMLPerformanceTiming_query_interface(DispatchEx *dispex, REFIID riid)
+{
+    HTMLPerformanceTiming *This = HTMLPerformanceTiming_from_DispatchEx(dispex);
+
+    if(IsEqualGUID(&IID_IHTMLPerformanceTiming, riid))
+        return &This->IHTMLPerformanceTiming_iface;
+
+    return NULL;
+}
+
 static void HTMLPerformanceTiming_traverse(DispatchEx *dispex, nsCycleCollectionTraversalCallback *cb)
 {
     HTMLPerformanceTiming *This = HTMLPerformanceTiming_from_DispatchEx(dispex);
@@ -1968,6 +1868,7 @@ static void HTMLPerformanceTiming_destructor(DispatchEx *dispex)
 }
 
 static const dispex_static_data_vtbl_t HTMLPerformanceTiming_dispex_vtbl = {
+    .query_interface  = HTMLPerformanceTiming_query_interface,
     .destructor       = HTMLPerformanceTiming_destructor,
     .traverse         = HTMLPerformanceTiming_traverse,
     .unlink           = HTMLPerformanceTiming_unlink
@@ -1999,43 +1900,19 @@ static inline HTMLPerformanceNavigation *impl_from_IHTMLPerformanceNavigation(IH
 static HRESULT WINAPI HTMLPerformanceNavigation_QueryInterface(IHTMLPerformanceNavigation *iface, REFIID riid, void **ppv)
 {
     HTMLPerformanceNavigation *This = impl_from_IHTMLPerformanceNavigation(iface);
-
-    TRACE("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-
-    if(IsEqualGUID(&IID_IUnknown, riid)) {
-        *ppv = &This->IHTMLPerformanceNavigation_iface;
-    }else if(IsEqualGUID(&IID_IHTMLPerformanceNavigation, riid)) {
-        *ppv = &This->IHTMLPerformanceNavigation_iface;
-    }else if(dispex_query_interface(&This->dispex, riid, ppv)) {
-        return *ppv ? S_OK : E_NOINTERFACE;
-    }else {
-        WARN("Unsupported interface %s\n", debugstr_mshtml_guid(riid));
-        *ppv = NULL;
-        return E_NOINTERFACE;
-    }
-
-    IUnknown_AddRef((IUnknown*)*ppv);
-    return S_OK;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLPerformanceNavigation_AddRef(IHTMLPerformanceNavigation *iface)
 {
     HTMLPerformanceNavigation *This = impl_from_IHTMLPerformanceNavigation(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLPerformanceNavigation_Release(IHTMLPerformanceNavigation *iface)
 {
     HTMLPerformanceNavigation *This = impl_from_IHTMLPerformanceNavigation(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLPerformanceNavigation_GetTypeInfoCount(IHTMLPerformanceNavigation *iface, UINT *pctinfo)
@@ -2128,6 +2005,16 @@ static inline HTMLPerformanceNavigation *HTMLPerformanceNavigation_from_Dispatch
     return CONTAINING_RECORD(iface, HTMLPerformanceNavigation, dispex);
 }
 
+static void *HTMLPerformanceNavigation_query_interface(DispatchEx *dispex, REFIID riid)
+{
+    HTMLPerformanceNavigation *This = HTMLPerformanceNavigation_from_DispatchEx(dispex);
+
+    if(IsEqualGUID(&IID_IHTMLPerformanceNavigation, riid))
+        return &This->IHTMLPerformanceNavigation_iface;
+
+    return NULL;
+}
+
 static void HTMLPerformanceNavigation_traverse(DispatchEx *dispex, nsCycleCollectionTraversalCallback *cb)
 {
     HTMLPerformanceNavigation *This = HTMLPerformanceNavigation_from_DispatchEx(dispex);
@@ -2152,6 +2039,7 @@ static void HTMLPerformanceNavigation_destructor(DispatchEx *dispex)
 }
 
 static const dispex_static_data_vtbl_t HTMLPerformanceNavigation_dispex_vtbl = {
+    .query_interface  = HTMLPerformanceNavigation_query_interface,
     .destructor       = HTMLPerformanceNavigation_destructor,
     .traverse         = HTMLPerformanceNavigation_traverse,
     .unlink           = HTMLPerformanceNavigation_unlink
@@ -2185,43 +2073,19 @@ static inline HTMLPerformance *impl_from_IHTMLPerformance(IHTMLPerformance *ifac
 static HRESULT WINAPI HTMLPerformance_QueryInterface(IHTMLPerformance *iface, REFIID riid, void **ppv)
 {
     HTMLPerformance *This = impl_from_IHTMLPerformance(iface);
-
-    TRACE("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-
-    if(IsEqualGUID(&IID_IUnknown, riid)) {
-        *ppv = &This->IHTMLPerformance_iface;
-    }else if(IsEqualGUID(&IID_IHTMLPerformance, riid)) {
-        *ppv = &This->IHTMLPerformance_iface;
-    }else if(dispex_query_interface(&This->dispex, riid, ppv)) {
-        return *ppv ? S_OK : E_NOINTERFACE;
-    }else {
-        WARN("Unsupported interface %s\n", debugstr_mshtml_guid(riid));
-        *ppv = NULL;
-        return E_NOINTERFACE;
-    }
-
-    IUnknown_AddRef((IUnknown*)*ppv);
-    return S_OK;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLPerformance_AddRef(IHTMLPerformance *iface)
 {
     HTMLPerformance *This = impl_from_IHTMLPerformance(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLPerformance_Release(IHTMLPerformance *iface)
 {
     HTMLPerformance *This = impl_from_IHTMLPerformance(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLPerformance_GetTypeInfoCount(IHTMLPerformance *iface, UINT *pctinfo)
@@ -2277,8 +2141,7 @@ static HRESULT WINAPI HTMLPerformance_get_navigation(IHTMLPerformance *iface,
         navigation->window = This->window;
         IHTMLWindow2_AddRef(&This->window->base.IHTMLWindow2_iface);
 
-        init_dispatch(&navigation->dispex, (IUnknown*)&navigation->IHTMLPerformanceNavigation_iface,
-                      &HTMLPerformanceNavigation_dispex, dispex_compat_mode(&This->dispex));
+        init_dispatch(&navigation->dispex, &HTMLPerformanceNavigation_dispex, dispex_compat_mode(&This->dispex));
 
         This->navigation = &navigation->IHTMLPerformanceNavigation_iface;
     }
@@ -2304,8 +2167,7 @@ static HRESULT WINAPI HTMLPerformance_get_timing(IHTMLPerformance *iface, IHTMLP
         timing->window = This->window;
         IHTMLWindow2_AddRef(&This->window->base.IHTMLWindow2_iface);
 
-        init_dispatch(&timing->dispex, (IUnknown*)&timing->IHTMLPerformanceTiming_iface,
-                      &HTMLPerformanceTiming_dispex, dispex_compat_mode(&This->dispex));
+        init_dispatch(&timing->dispex, &HTMLPerformanceTiming_dispex, dispex_compat_mode(&This->dispex));
 
         This->timing = &timing->IHTMLPerformanceTiming_iface;
     }
@@ -2349,6 +2211,16 @@ static inline HTMLPerformance *HTMLPerformance_from_DispatchEx(DispatchEx *iface
     return CONTAINING_RECORD(iface, HTMLPerformance, dispex);
 }
 
+static void *HTMLPerformance_query_interface(DispatchEx *dispex, REFIID riid)
+{
+    HTMLPerformance *This = HTMLPerformance_from_DispatchEx(dispex);
+
+    if(IsEqualGUID(&IID_IHTMLPerformance, riid))
+        return &This->IHTMLPerformance_iface;
+
+    return NULL;
+}
+
 static void HTMLPerformance_traverse(DispatchEx *dispex, nsCycleCollectionTraversalCallback *cb)
 {
     HTMLPerformance *This = HTMLPerformance_from_DispatchEx(dispex);
@@ -2379,6 +2251,7 @@ static void HTMLPerformance_destructor(DispatchEx *dispex)
 }
 
 static const dispex_static_data_vtbl_t HTMLPerformance_dispex_vtbl = {
+    .query_interface  = HTMLPerformance_query_interface,
     .destructor       = HTMLPerformance_destructor,
     .traverse         = HTMLPerformance_traverse,
     .unlink           = HTMLPerformance_unlink
@@ -2408,8 +2281,7 @@ HRESULT create_performance(HTMLInnerWindow *window, IHTMLPerformance **ret)
     performance->window = window;
     IHTMLWindow2_AddRef(&window->base.IHTMLWindow2_iface);
 
-    init_dispatch(&performance->dispex, (IUnknown*)&performance->IHTMLPerformance_iface,
-                  &HTMLPerformance_dispex, compat_mode);
+    init_dispatch(&performance->dispex, &HTMLPerformance_dispex, compat_mode);
 
     *ret = &performance->IHTMLPerformance_iface;
     return S_OK;
@@ -2428,33 +2300,19 @@ static inline HTMLNamespaceCollection *impl_from_IHTMLNamespaceCollection(IHTMLN
 static HRESULT WINAPI HTMLNamespaceCollection_QueryInterface(IHTMLNamespaceCollection *iface, REFIID riid, void **ppv)
 {
     HTMLNamespaceCollection *This = impl_from_IHTMLNamespaceCollection(iface);
-
-    if(dispex_query_interface(&This->dispex, riid, ppv))
-        return *ppv ? S_OK : E_NOINTERFACE;
-
-    *ppv = NULL;
-    WARN("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-    return E_NOINTERFACE;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLNamespaceCollection_AddRef(IHTMLNamespaceCollection *iface)
 {
     HTMLNamespaceCollection *This = impl_from_IHTMLNamespaceCollection(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLNamespaceCollection_Release(IHTMLNamespaceCollection *iface)
 {
     HTMLNamespaceCollection *This = impl_from_IHTMLNamespaceCollection(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLNamespaceCollection_GetTypeInfoCount(IHTMLNamespaceCollection *iface, UINT *pctinfo)
@@ -2573,8 +2431,7 @@ HRESULT create_namespace_collection(compat_mode_t compat_mode, IHTMLNamespaceCol
         return E_OUTOFMEMORY;
 
     namespaces->IHTMLNamespaceCollection_iface.lpVtbl = &HTMLNamespaceCollectionVtbl;
-    init_dispatch(&namespaces->dispex, (IUnknown*)&namespaces->IHTMLNamespaceCollection_iface,
-                  &HTMLNamespaceCollection_dispex, compat_mode);
+    init_dispatch(&namespaces->dispex, &HTMLNamespaceCollection_dispex, compat_mode);
     *ret = &namespaces->IHTMLNamespaceCollection_iface;
     return S_OK;
 }
@@ -2592,43 +2449,19 @@ static inline struct console *impl_from_IWineMSHTMLConsole(IWineMSHTMLConsole *i
 static HRESULT WINAPI console_QueryInterface(IWineMSHTMLConsole *iface, REFIID riid, void **ppv)
 {
     struct console *console = impl_from_IWineMSHTMLConsole(iface);
-
-    TRACE("(%p)->(%s %p)\n", console, debugstr_mshtml_guid(riid), ppv);
-
-    if(IsEqualGUID(&IID_IUnknown, riid)) {
-        *ppv = &console->IWineMSHTMLConsole_iface;
-    }else if(IsEqualGUID(&IID_IWineMSHTMLConsole, riid)) {
-        *ppv = &console->IWineMSHTMLConsole_iface;
-    }else if(dispex_query_interface(&console->dispex, riid, ppv)) {
-        return *ppv ? S_OK : E_NOINTERFACE;
-    }else {
-        WARN("(%p)->(%s %p)\n", console, debugstr_mshtml_guid(riid), ppv);
-        *ppv = NULL;
-        return E_NOINTERFACE;
-    }
-
-    IUnknown_AddRef((IUnknown*)*ppv);
-    return S_OK;
+    return IDispatchEx_QueryInterface(&console->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI console_AddRef(IWineMSHTMLConsole *iface)
 {
     struct console *console = impl_from_IWineMSHTMLConsole(iface);
-    LONG ref = dispex_ref_incr(&console->dispex);
-
-    TRACE("(%p) ref=%ld\n", console, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&console->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI console_Release(IWineMSHTMLConsole *iface)
 {
     struct console *console = impl_from_IWineMSHTMLConsole(iface);
-    LONG ref = dispex_ref_decr(&console->dispex);
-
-    TRACE("(%p) ref=%ld\n", console, ref);
-
-    return ref;
+    return IDispatchEx_Release(&console->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI console_GetTypeInfoCount(IWineMSHTMLConsole *iface, UINT *pctinfo)
@@ -2808,6 +2641,16 @@ static inline struct console *console_from_DispatchEx(DispatchEx *iface)
     return CONTAINING_RECORD(iface, struct console, dispex);
 }
 
+static void *console_query_interface(DispatchEx *dispex, REFIID riid)
+{
+    struct console *console = console_from_DispatchEx(dispex);
+
+    if(IsEqualGUID(&IID_IWineMSHTMLConsole, riid))
+        return &console->IWineMSHTMLConsole_iface;
+
+    return NULL;
+}
+
 static void console_destructor(DispatchEx *dispex)
 {
     struct console *console = console_from_DispatchEx(dispex);
@@ -2815,6 +2658,7 @@ static void console_destructor(DispatchEx *dispex)
 }
 
 static const dispex_static_data_vtbl_t console_dispex_vtbl = {
+    .query_interface  = console_query_interface,
     .destructor       = console_destructor,
 };
 
@@ -2841,7 +2685,7 @@ void create_console(compat_mode_t compat_mode, IWineMSHTMLConsole **ret)
     }
 
     obj->IWineMSHTMLConsole_iface.lpVtbl = &WineMSHTMLConsoleVtbl;
-    init_dispatch(&obj->dispex, (IUnknown*)&obj->IWineMSHTMLConsole_iface, &console_dispex, compat_mode);
+    init_dispatch(&obj->dispex, &console_dispex, compat_mode);
 
     *ret = &obj->IWineMSHTMLConsole_iface;
 }
@@ -2874,40 +2718,19 @@ static inline struct media_query_list *impl_from_IWineMSHTMLMediaQueryList(IWine
 static HRESULT WINAPI media_query_list_QueryInterface(IWineMSHTMLMediaQueryList *iface, REFIID riid, void **ppv)
 {
     struct media_query_list *media_query_list = impl_from_IWineMSHTMLMediaQueryList(iface);
-
-    TRACE("(%p)->(%s %p)\n", media_query_list, debugstr_mshtml_guid(riid), ppv);
-
-    if(IsEqualGUID(&IID_IUnknown, riid) || IsEqualGUID(&IID_IWineMSHTMLMediaQueryList, riid)) {
-        *ppv = &media_query_list->IWineMSHTMLMediaQueryList_iface;
-    }else if(dispex_query_interface(&media_query_list->dispex, riid, ppv)) {
-        return *ppv ? S_OK : E_NOINTERFACE;
-    }else {
-        *ppv = NULL;
-        return E_NOINTERFACE;
-    }
-
-    IUnknown_AddRef((IUnknown*)*ppv);
-    return S_OK;
+    return IDispatchEx_QueryInterface(&media_query_list->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI media_query_list_AddRef(IWineMSHTMLMediaQueryList *iface)
 {
     struct media_query_list *media_query_list = impl_from_IWineMSHTMLMediaQueryList(iface);
-    LONG ref = dispex_ref_incr(&media_query_list->dispex);
-
-    TRACE("(%p) ref=%ld\n", media_query_list, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&media_query_list->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI media_query_list_Release(IWineMSHTMLMediaQueryList *iface)
 {
     struct media_query_list *media_query_list = impl_from_IWineMSHTMLMediaQueryList(iface);
-    LONG ref = dispex_ref_decr(&media_query_list->dispex);
-
-    TRACE("(%p) ref=%ld\n", media_query_list, ref);
-
-    return ref;
+    return IDispatchEx_Release(&media_query_list->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI media_query_list_GetTypeInfoCount(IWineMSHTMLMediaQueryList *iface, UINT *pctinfo)
@@ -3131,6 +2954,16 @@ static inline struct media_query_list *media_query_list_from_DispatchEx(Dispatch
     return CONTAINING_RECORD(iface, struct media_query_list, dispex);
 }
 
+static void *media_query_list_query_interface(DispatchEx *dispex, REFIID riid)
+{
+    struct media_query_list *media_query_list = media_query_list_from_DispatchEx(dispex);
+
+    if(IsEqualGUID(&IID_IWineMSHTMLMediaQueryList, riid))
+        return &media_query_list->IWineMSHTMLMediaQueryList_iface;
+
+    return NULL;
+}
+
 static void media_query_list_traverse(DispatchEx *dispex, nsCycleCollectionTraversalCallback *cb)
 {
     struct media_query_list *media_query_list = media_query_list_from_DispatchEx(dispex);
@@ -3164,6 +2997,7 @@ static void media_query_list_destructor(DispatchEx *dispex)
 }
 
 static const dispex_static_data_vtbl_t media_query_list_dispex_vtbl = {
+    .query_interface  = media_query_list_query_interface,
     .destructor       = media_query_list_destructor,
     .traverse         = media_query_list_traverse,
     .unlink           = media_query_list_unlink
@@ -3218,8 +3052,7 @@ HRESULT create_media_query_list(HTMLWindow *window, BSTR media_query, IDispatch 
 
     media_query_list->IWineMSHTMLMediaQueryList_iface.lpVtbl = &media_query_list_vtbl;
     list_init(&media_query_list->listeners);
-    init_dispatch(&media_query_list->dispex, (IUnknown*)&media_query_list->IWineMSHTMLMediaQueryList_iface,
-                  &media_query_list_dispex, dispex_compat_mode(&window->inner_window->event_target.dispex));
+    init_dispatch(&media_query_list->dispex, &media_query_list_dispex, dispex_compat_mode(&window->inner_window->event_target.dispex));
 
     *ret = (IDispatch*)&media_query_list->IWineMSHTMLMediaQueryList_iface;
     return S_OK;

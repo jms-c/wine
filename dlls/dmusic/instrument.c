@@ -19,7 +19,6 @@
  */
 
 #include "dmusic_private.h"
-#include "dmobject.h"
 
 WINE_DEFAULT_DEBUG_CHANNEL(dmusic);
 
@@ -267,10 +266,15 @@ static HRESULT parse_lrgn_list(struct instrument *This, IStream *stream, struct 
     return hr;
 }
 
-static HRESULT parse_ins_chunk(struct instrument *This, IStream *stream, struct chunk_entry *parent)
+static HRESULT parse_ins_chunk(struct instrument *This, IStream *stream, struct chunk_entry *parent,
+        DMUS_OBJECTDESC *desc)
 {
     struct chunk_entry chunk = {.parent = parent};
     HRESULT hr;
+
+    if (FAILED(hr = dmobj_parsedescriptor(stream, parent, desc, DMUS_OBJ_NAME_INFO|DMUS_OBJ_GUID_DLID))
+            || FAILED(hr = stream_reset_chunk_data(stream, parent)))
+        return hr;
 
     while ((hr = stream_next_chunk(stream, &chunk)) == S_OK)
     {
@@ -281,7 +285,8 @@ static HRESULT parse_ins_chunk(struct instrument *This, IStream *stream, struct 
             break;
 
         case FOURCC_DLID:
-            hr = stream_chunk_get_data(stream, &chunk, &This->id, sizeof(This->id));
+        case MAKE_IDTYPE(FOURCC_LIST, DMUS_FOURCC_INFO_LIST):
+            /* already parsed by dmobj_parsedescriptor */
             break;
 
         case MAKE_IDTYPE(FOURCC_LIST, FOURCC_LRGN):
@@ -303,9 +308,9 @@ static HRESULT parse_ins_chunk(struct instrument *This, IStream *stream, struct 
     return hr;
 }
 
-HRESULT instrument_create_from_stream(IStream *stream, IDirectMusicInstrument **ret_iface)
+HRESULT instrument_create_from_chunk(IStream *stream, struct chunk_entry *parent,
+        DMUS_OBJECTDESC *desc, IDirectMusicInstrument **ret_iface)
 {
-    struct chunk_entry chunk = {0};
     IDirectMusicInstrument *iface;
     struct instrument *This;
     HRESULT hr;
@@ -315,42 +320,48 @@ HRESULT instrument_create_from_stream(IStream *stream, IDirectMusicInstrument **
     if (FAILED(hr = instrument_create(&iface))) return hr;
     This = impl_from_IDirectMusicInstrument(iface);
 
-    if ((hr = stream_next_chunk(stream, &chunk)) == S_OK)
+    if (FAILED(hr = parse_ins_chunk(This, stream, parent, desc)))
     {
-        switch (MAKE_IDTYPE(chunk.id, chunk.type))
-        {
-        case MAKE_IDTYPE(FOURCC_LIST, FOURCC_INS):
-            hr = parse_ins_chunk(This, stream, &chunk);
-            break;
-
-        default:
-            WARN("Invalid instrument chunk %s %s\n", debugstr_fourcc(chunk.id), debugstr_fourcc(chunk.type));
-            hr = E_INVALIDARG;
-            break;
-        }
+        IDirectMusicInstrument_Release(iface);
+        return DMUS_E_UNSUPPORTED_STREAM;
     }
-
-    if (FAILED(hr)) goto error;
 
     if (TRACE_ON(dmusic))
     {
-        TRACE("Created DirectMusicInstrument (%p) ***\n", This);
-        if (!IsEqualGUID(&This->id, &GUID_NULL))
-            TRACE(" - GUID = %s\n", debugstr_dmguid(&This->id));
-        TRACE(" - Instrument header:\n");
-        TRACE("    - cRegions: %ld\n", This->header.cRegions);
-        TRACE("    - Locale:\n");
-        TRACE("       - ulBank: %ld\n", This->header.Locale.ulBank);
-        TRACE("       - ulInstrument: %ld\n", This->header.Locale.ulInstrument);
-        TRACE("       => dwPatch: %ld\n", MIDILOCALE2Patch(&This->header.Locale));
+        struct region *region;
+        UINT i;
+
+        TRACE("Created DirectMusicInstrument %p\n", This);
+        TRACE(" - header:\n");
+        TRACE("    - regions: %ld\n", This->header.cRegions);
+        TRACE("    - locale: {bank: %#lx, instrument: %#lx} (patch %#lx)\n",
+                This->header.Locale.ulBank, This->header.Locale.ulInstrument,
+                MIDILOCALE2Patch(&This->header.Locale));
+        if (desc->dwValidData & DMUS_OBJ_OBJECT) TRACE(" - guid: %s\n", debugstr_dmguid(&desc->guidObject));
+        if (desc->dwValidData & DMUS_OBJ_NAME) TRACE(" - name: %s\n", debugstr_w(desc->wszName));
+
+        TRACE(" - regions:\n");
+        LIST_FOR_EACH_ENTRY(region, &This->regions, struct region, entry)
+        {
+            TRACE("   - region:\n");
+            TRACE("     - header: {key: %u - %u, vel: %u - %u, options: %#x, group: %#x}\n",
+                    region->header.RangeKey.usLow, region->header.RangeKey.usHigh,
+                    region->header.RangeVelocity.usLow, region->header.RangeVelocity.usHigh,
+                    region->header.fusOptions, region->header.usKeyGroup);
+            TRACE("     - wave_link: {options: %#x, group: %u, channel: %lu, index: %lu}\n",
+                    region->wave_link.fusOptions, region->wave_link.usPhaseGroup,
+                    region->wave_link.ulChannel, region->wave_link.ulTableIndex);
+            TRACE("     - wave_sample: {size: %lu, unity_note: %u, fine_tune: %d, attenuation: %ld, options: %#lx, loops: %lu}\n",
+                    region->wave_sample.cbSize, region->wave_sample.usUnityNote,
+                    region->wave_sample.sFineTune, region->wave_sample.lAttenuation,
+                    region->wave_sample.fulOptions, region->wave_sample.cSampleLoops);
+            for (i = 0; i < region->wave_sample.cSampleLoops; i++)
+                TRACE("     - wave_loop[%u]: {size: %lu, type: %lu, start: %lu, length: %lu}\n", i,
+                        region->wave_loop.cbSize, region->wave_loop.ulType,
+                        region->wave_loop.ulStart, region->wave_loop.ulLength);
+        }
     }
 
     *ret_iface = iface;
     return S_OK;
-
-error:
-    IDirectMusicInstrument_Release(iface);
-
-    stream_skip_chunk(stream, &chunk);
-    return DMUS_E_UNSUPPORTED_STREAM;
 }

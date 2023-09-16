@@ -41,6 +41,8 @@
 #include "dmusics.h"
 #include "dmksctrl.h"
 
+#include "dmobject.h"
+
 /*****************************************************************************
  * Interfaces
  */
@@ -95,7 +97,8 @@ extern HRESULT DMUSIC_CreateReferenceClockImpl (LPCGUID lpcGUID, LPVOID* ppobj, 
 
 extern HRESULT download_create(DWORD size, IDirectMusicDownload **ret_iface);
 
-extern HRESULT instrument_create_from_stream(IStream *stream, IDirectMusicInstrument **ret_iface);
+extern HRESULT instrument_create_from_chunk(IStream *stream, struct chunk_entry *parent,
+        DMUS_OBJECTDESC *desc, IDirectMusicInstrument **ret_iface);
 
 /*****************************************************************************
  * IDirectMusic8Impl implementation structure
@@ -170,10 +173,7 @@ struct instrument
     IDirectMusicInstrument IDirectMusicInstrument_iface;
     LONG ref;
 
-    GUID id;
     INSTHEADER header;
-    WCHAR wszName[DMUS_MAX_NAME];
-    /* instrument data */
 
     struct list articulations;
     struct list regions;
@@ -189,12 +189,6 @@ static inline struct instrument *impl_from_IDirectMusicInstrument(IDirectMusicIn
  */
 void dmusic_remove_port(IDirectMusic8Impl *dmusic, IDirectMusicPort *port);
 
-/* for simpler reading */
-typedef struct _DMUS_PRIVATE_CHUNK {
-	FOURCC fccID; /* FOURCC ID of the chunk */
-	DWORD dwSize; /* size of the chunk */
-} DMUS_PRIVATE_CHUNK, *LPDMUS_PRIVATE_CHUNK;
-
 /* used for generic dumping (copied from ddraw) */
 typedef struct {
     DWORD val;
@@ -208,8 +202,6 @@ extern DWORD MIDILOCALE2Patch (const MIDILOCALE *pLocale);
 /* MIDILOCALE from dwPatch */
 extern void Patch2MIDILOCALE (DWORD dwPatch, LPMIDILOCALE pLocale);
 
-/* check whether the given DWORD is even (return 0) or odd (return 1) */
-extern int even_or_odd (DWORD number);
 /* Dump whole DMUS_PORTPARAMS struct */
 extern void dump_DMUS_PORTPARAMS(LPDMUS_PORTPARAMS params);
 

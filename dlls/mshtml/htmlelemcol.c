@@ -214,33 +214,19 @@ static HRESULT WINAPI HTMLElementCollection_QueryInterface(IHTMLElementCollectio
                                                            REFIID riid, void **ppv)
 {
     HTMLElementCollection *This = impl_from_IHTMLElementCollection(iface);
-
-    if(dispex_query_interface(&This->dispex, riid, ppv))
-        return *ppv ? S_OK : E_NOINTERFACE;
-
-    *ppv = NULL;
-    WARN("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-    return E_NOINTERFACE;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLElementCollection_AddRef(IHTMLElementCollection *iface)
 {
     HTMLElementCollection *This = impl_from_IHTMLElementCollection(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLElementCollection_Release(IHTMLElementCollection *iface)
 {
     HTMLElementCollection *This = impl_from_IHTMLElementCollection(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLElementCollection_GetTypeInfoCount(IHTMLElementCollection *iface,
@@ -873,8 +859,7 @@ static IHTMLElementCollection *HTMLElementCollection_Create(HTMLElement **elems,
     ret->elems = elems;
     ret->len = len;
 
-    init_dispatch(&ret->dispex, (IUnknown*)&ret->IHTMLElementCollection_iface,
-                  &HTMLElementCollection_dispex, compat_mode);
+    init_dispatch(&ret->dispex, &HTMLElementCollection_dispex, compat_mode);
 
     TRACE("ret=%p len=%ld\n", ret, len);
 

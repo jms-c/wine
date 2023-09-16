@@ -35,7 +35,6 @@
 #include "dmusici.h"
 
 #include "dmusic_private.h"
-#include "dmobject.h"
 
 WINE_DEFAULT_DEBUG_CHANNEL(dmusic);
 
@@ -164,11 +163,6 @@ void Patch2MIDILOCALE (DWORD dwPatch, LPMIDILOCALE pLocale) {
 	pLocale->ulInstrument = (dwPatch & 0x7F); /* get PC value */
 	pLocale->ulBank = ((dwPatch & 0x007F7F00) >> 8); /* get MIDI bank location */
 	pLocale->ulBank |= (dwPatch & F_INSTRUMENT_DRUMS); /* get drum bit */
-}
-
-/* check whether the given DWORD is even (return 0) or odd (return 1) */
-int even_or_odd (DWORD number) {
-	return (number & 0x1); /* basically, check if bit 0 is set ;) */
 }
 
 /* generic flag-dumping function */

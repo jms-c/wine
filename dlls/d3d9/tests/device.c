@@ -3172,10 +3172,14 @@ static void test_draw_primitive(void)
     hr = IDirect3DDevice9_DrawPrimitive(device, D3DPT_TRIANGLELIST, 0, 2);
     ok(SUCCEEDED(hr), "DrawPrimitive failed, hr %#lx.\n", hr);
 
-    hr = IDirect3DDevice9_DrawPrimitiveUP(device, D3DPT_TRIANGLELIST, 2, quad, 0);
-    ok(hr == D3DERR_INVALIDCALL, "Got unexpected hr %#lx.\n", hr);
-    hr = IDirect3DDevice9_DrawPrimitiveUP(device, D3DPT_TRIANGLELIST, 0, quad, 0);
-    ok(hr == D3DERR_INVALIDCALL, "Got unexpected hr %#lx.\n", hr);
+    /* Crashes on r200, Windows XP with STATUS_INTEGER_DIVIDE_BY_ZERO. */
+    if (0)
+    {
+        hr = IDirect3DDevice9_DrawPrimitiveUP(device, D3DPT_TRIANGLELIST, 2, quad, 0);
+        ok(hr == D3DERR_INVALIDCALL, "Got unexpected hr %#lx.\n", hr);
+        hr = IDirect3DDevice9_DrawPrimitiveUP(device, D3DPT_TRIANGLELIST, 0, quad, 0);
+        ok(hr == D3DERR_INVALIDCALL, "Got unexpected hr %#lx.\n", hr);
+    }
 
     hr = IDirect3DDevice9_DrawPrimitiveUP(device, D3DPT_TRIANGLELIST, 2, quad, sizeof(*quad));
     ok(SUCCEEDED(hr), "DrawPrimitiveUP failed, hr %#lx.\n", hr);
@@ -3205,12 +3209,16 @@ static void test_draw_primitive(void)
     ok(current_ib == index_buffer, "Unexpected index buffer %p.\n", current_ib);
     IDirect3DIndexBuffer9_Release(current_ib);
 
-    hr = IDirect3DDevice9_DrawIndexedPrimitiveUP(device, D3DPT_TRIANGLELIST, 0, 4, 2,
-            indices, D3DFMT_INDEX16, quad, 0);
-    ok(hr == D3DERR_INVALIDCALL, "Got unexpected hr %#lx.\n", hr);
-    hr = IDirect3DDevice9_DrawIndexedPrimitiveUP(device, D3DPT_TRIANGLELIST, 0, 4, 0,
-            indices, D3DFMT_INDEX16, quad, 0);
-    ok(hr == D3DERR_INVALIDCALL, "Got unexpected hr %#lx.\n", hr);
+    /* Crashes on r200, Windows XP with STATUS_INTEGER_DIVIDE_BY_ZERO. */
+    if (0)
+    {
+        hr = IDirect3DDevice9_DrawIndexedPrimitiveUP(device, D3DPT_TRIANGLELIST, 0, 4, 2,
+                indices, D3DFMT_INDEX16, quad, 0);
+        ok(hr == D3DERR_INVALIDCALL, "Got unexpected hr %#lx.\n", hr);
+        hr = IDirect3DDevice9_DrawIndexedPrimitiveUP(device, D3DPT_TRIANGLELIST, 0, 4, 0,
+                indices, D3DFMT_INDEX16, quad, 0);
+        ok(hr == D3DERR_INVALIDCALL, "Got unexpected hr %#lx.\n", hr);
+    }
 
     hr = IDirect3DDevice9_DrawIndexedPrimitiveUP(device, D3DPT_TRIANGLELIST, 0, 4, 2,
             indices, D3DFMT_INDEX16, quad, sizeof(*quad));
@@ -4273,6 +4281,7 @@ static void test_wndproc(void)
         SetForegroundWindow(GetDesktopWindow());
         ok(!expect_messages->message, "Expected message %#x for window %#x, but didn't receive it, i=%u.\n",
                 expect_messages->message, expect_messages->window, i);
+        flaky
         ok(!windowposchanged_received, "Received WM_WINDOWPOSCHANGED but did not expect it.\n");
         expect_messages = NULL;
         flush_events();
@@ -4363,8 +4372,11 @@ static void test_wndproc(void)
         SetForegroundWindow(GetDesktopWindow());
         ok(!expect_messages->message, "Expected message %#x for window %#x, but didn't receive it, i=%u.\n",
                 expect_messages->message, expect_messages->window, i);
-        flaky_if(i == 0)
+
+        /* kwin and Win8+ sometimes resize hidden windows. */
+        flaky
         ok(!windowposchanged_received, "Received WM_WINDOWPOSCHANGED but did not expect it, i=%u.\n", i);
+
         expect_messages = NULL;
 
         /* The window is iconic even though no message was sent. */
@@ -9105,7 +9117,7 @@ static void test_getdc(void)
         if (!testdata[i].getdc_supported)
             continue;
 
-        if (FAILED(hr = IDirect3DDevice9_CreateCubeTexture(device, 64, 0, 0,
+        if (FAILED(hr = IDirect3DDevice9_CreateCubeTexture(device, 64, 3, 0,
                 testdata[i].format, D3DPOOL_MANAGED, &cube_texture, NULL)))
         {
             skip("Failed to create cube texture for format %s (hr %#lx), skipping tests.\n", testdata[i].name, hr);
@@ -13576,6 +13588,7 @@ static void test_resource_access(void)
     D3DADAPTER_IDENTIFIER9 identifier;
     struct device_desc device_desc;
     D3DSURFACE_DESC surface_desc;
+    BOOL skip_ati2n_once = FALSE;
     IDirect3DDevice9 *device;
     unsigned int i, j;
     IDirect3D9 *d3d;
@@ -13727,7 +13740,11 @@ static void test_resource_access(void)
             if (tests[j].format == FORMAT_ATI2 && FAILED(IDirect3D9_CheckDeviceFormat(d3d, D3DADAPTER_DEFAULT,
                     D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, 0, D3DRTYPE_TEXTURE, format)))
             {
-                skip("ATI2N texture not supported.\n");
+                if (!skip_ati2n_once)
+                {
+                    skip("ATI2N texture not supported.\n");
+                    skip_ati2n_once = TRUE;
+                }
                 continue;
             }
 
@@ -13884,6 +13901,17 @@ static void test_resource_access(void)
             format = MAKEFOURCC('A','T','I','2');
         else
             format = colour_format;
+
+        if (tests[i].format == FORMAT_ATI2 && FAILED(IDirect3D9_CheckDeviceFormat(d3d, D3DADAPTER_DEFAULT,
+                D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, 0, D3DRTYPE_VOLUMETEXTURE, format)))
+        {
+            if (!skip_ati2n_once)
+            {
+                skip("ATI2N texture not supported.\n");
+                skip_ati2n_once = TRUE;
+            }
+            continue;
+        }
 
         hr = IDirect3DDevice9_CreateVolumeTexture(device, 16, 16, 1, 1,
                 tests[i].usage, format, tests[i].pool, &texture, NULL);

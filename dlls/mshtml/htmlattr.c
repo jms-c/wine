@@ -41,33 +41,19 @@ static HRESULT WINAPI HTMLDOMAttribute_QueryInterface(IHTMLDOMAttribute *iface,
                                                       REFIID riid, void **ppv)
 {
     HTMLDOMAttribute *This = impl_from_IHTMLDOMAttribute(iface);
-
-    if(dispex_query_interface(&This->dispex, riid, ppv))
-        return *ppv ? S_OK : E_NOINTERFACE;
-
-    *ppv = NULL;
-    WARN("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-    return E_NOINTERFACE;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLDOMAttribute_AddRef(IHTMLDOMAttribute *iface)
 {
     HTMLDOMAttribute *This = impl_from_IHTMLDOMAttribute(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLDOMAttribute_Release(IHTMLDOMAttribute *iface)
 {
     HTMLDOMAttribute *This = impl_from_IHTMLDOMAttribute(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLDOMAttribute_GetTypeInfoCount(IHTMLDOMAttribute *iface, UINT *pctinfo)
@@ -537,8 +523,7 @@ HRESULT HTMLDOMAttribute_Create(const WCHAR *name, HTMLElement *elem, DISPID dis
     ret->dispid = dispid;
     ret->elem = elem;
 
-    init_dispatch(&ret->dispex, (IUnknown*)&ret->IHTMLDOMAttribute_iface,
-                  &HTMLDOMAttribute_dispex, compat_mode);
+    init_dispatch(&ret->dispex, &HTMLDOMAttribute_dispex, compat_mode);
 
     /* For attributes attached to an element, (elem,dispid) pair should be valid used for its operation. */
     if(elem) {

@@ -45,7 +45,6 @@
 /*****************************************************************************
  * Interfaces
  */
-typedef struct IDirectMusicGraphImpl IDirectMusicGraphImpl;
 typedef struct IDirectMusicAudioPathImpl IDirectMusicAudioPathImpl;
 
 /*****************************************************************************
@@ -85,12 +84,6 @@ typedef struct _DMUS_PRIVATE_TEMPO_ITEM {
   struct list entry; /* for listing elements */
   DMUS_IO_TEMPO_ITEM item;
 } DMUS_PRIVATE_TEMPO_ITEM, *LPDMUS_PRIVATE_TEMPO_ITEM;
-
-typedef struct _DMUS_PRIVATE_GRAPH_TOOL {
-  struct list entry; /* for listing elements */
-  DWORD dwIndex;
-  IDirectMusicTool* pTool;
-} DMUS_PRIVATE_GRAPH_TOOL, *LPDMUS_PRIVATE_GRAPH_TOOL;
 
 typedef struct _DMUS_PRIVATE_TEMPO_PLAY_STATE {
   DWORD dummy;

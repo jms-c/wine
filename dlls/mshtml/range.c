@@ -813,33 +813,19 @@ static inline HTMLTxtRange *impl_from_IHTMLTxtRange(IHTMLTxtRange *iface)
 static HRESULT WINAPI HTMLTxtRange_QueryInterface(IHTMLTxtRange *iface, REFIID riid, void **ppv)
 {
     HTMLTxtRange *This = impl_from_IHTMLTxtRange(iface);
-
-    if(dispex_query_interface(&This->dispex, riid, ppv))
-        return *ppv ? S_OK : E_NOINTERFACE;
-
-    *ppv = NULL;
-    WARN("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-    return E_NOINTERFACE;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLTxtRange_AddRef(IHTMLTxtRange *iface)
 {
     HTMLTxtRange *This = impl_from_IHTMLTxtRange(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLTxtRange_Release(IHTMLTxtRange *iface)
 {
     HTMLTxtRange *This = impl_from_IHTMLTxtRange(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLTxtRange_GetTypeInfoCount(IHTMLTxtRange *iface, UINT *pctinfo)
@@ -1759,8 +1745,7 @@ HRESULT HTMLTxtRange_Create(HTMLDocumentNode *doc, nsIDOMRange *nsrange, IHTMLTx
     if(!ret)
         return E_OUTOFMEMORY;
 
-    init_dispatch(&ret->dispex, (IUnknown*)&ret->IHTMLTxtRange_iface, &HTMLTxtRange_dispex,
-                                 dispex_compat_mode(&doc->node.event_target.dispex));
+    init_dispatch(&ret->dispex, &HTMLTxtRange_dispex, dispex_compat_mode(&doc->node.event_target.dispex));
 
     ret->IHTMLTxtRange_iface.lpVtbl = &HTMLTxtRangeVtbl;
     ret->IOleCommandTarget_iface.lpVtbl = &OleCommandTargetVtbl;
@@ -1784,33 +1769,19 @@ static inline HTMLDOMRange *impl_from_IHTMLDOMRange(IHTMLDOMRange *iface)
 static HRESULT WINAPI HTMLDOMRange_QueryInterface(IHTMLDOMRange *iface, REFIID riid, void **ppv)
 {
     HTMLDOMRange *This = impl_from_IHTMLDOMRange(iface);
-
-    if(dispex_query_interface(&This->dispex, riid, ppv))
-        return *ppv ? S_OK : E_NOINTERFACE;
-
-    *ppv = NULL;
-    WARN("(%p)->(%s %p)\n", This, debugstr_mshtml_guid(riid), ppv);
-    return E_NOINTERFACE;
+    return IDispatchEx_QueryInterface(&This->dispex.IDispatchEx_iface, riid, ppv);
 }
 
 static ULONG WINAPI HTMLDOMRange_AddRef(IHTMLDOMRange *iface)
 {
     HTMLDOMRange *This = impl_from_IHTMLDOMRange(iface);
-    LONG ref = dispex_ref_incr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_AddRef(&This->dispex.IDispatchEx_iface);
 }
 
 static ULONG WINAPI HTMLDOMRange_Release(IHTMLDOMRange *iface)
 {
     HTMLDOMRange *This = impl_from_IHTMLDOMRange(iface);
-    LONG ref = dispex_ref_decr(&This->dispex);
-
-    TRACE("(%p) ref=%ld\n", This, ref);
-
-    return ref;
+    return IDispatchEx_Release(&This->dispex.IDispatchEx_iface);
 }
 
 static HRESULT WINAPI HTMLDOMRange_GetTypeInfoCount(IHTMLDOMRange *iface, UINT *pctinfo)
@@ -2130,7 +2101,7 @@ HRESULT create_dom_range(nsIDOMRange *nsrange, compat_mode_t compat_mode, IHTMLD
     if(!ret)
         return E_OUTOFMEMORY;
 
-    init_dispatch(&ret->dispex, (IUnknown*)&ret->IHTMLDOMRange_iface, &HTMLDOMRange_dispex, compat_mode);
+    init_dispatch(&ret->dispex, &HTMLDOMRange_dispex, compat_mode);
 
     ret->IHTMLDOMRange_iface.lpVtbl = &HTMLDOMRangeVtbl;
 
