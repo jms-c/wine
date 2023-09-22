@@ -85,17 +85,21 @@ static void stream_end_chunk(IStream *stream, ULARGE_INTEGER *offset)
     ok(hr == S_OK, "got %#lx\n", hr);
     hr = IStream_Seek(stream, *(LARGE_INTEGER *)&position, STREAM_SEEK_SET, NULL);
     ok(hr == S_OK, "got %#lx\n", hr);
+    hr = IStream_Write(stream, &zero, (position.QuadPart & 1), NULL);
+    ok(hr == S_OK, "got %#lx\n", hr);
 }
 
 #define CHUNK_BEGIN(stream, type)                                \
     do {                                                         \
         ULARGE_INTEGER __off;                                    \
+        IStream *__stream = (stream);                            \
         stream_begin_chunk(stream, type, &__off);                \
         do
 
 #define CHUNK_RIFF(stream, form)                                 \
     do {                                                         \
         ULARGE_INTEGER __off;                                    \
+        IStream *__stream = (stream);                            \
         stream_begin_chunk(stream, "RIFF", &__off);              \
         IStream_Write(stream, form, 4, NULL);                    \
         do
@@ -103,13 +107,14 @@ static void stream_end_chunk(IStream *stream, ULARGE_INTEGER *offset)
 #define CHUNK_LIST(stream, form)                                 \
     do {                                                         \
         ULARGE_INTEGER __off;                                    \
+        IStream *__stream = (stream);                            \
         stream_begin_chunk(stream, "LIST", &__off);              \
         IStream_Write(stream, form, 4, NULL);                    \
         do
 
 #define CHUNK_END                                                \
         while (0);                                               \
-        stream_end_chunk(stream, &__off);                        \
+        stream_end_chunk(__stream, &__off);                      \
     } while (0)
 
 #define CHUNK_DATA(stream, type, data)                           \
@@ -1179,7 +1184,7 @@ static void test_download_instrument(void)
     static const LARGE_INTEGER zero = {0};
     IDirectMusicDownloadedInstrument *downloaded;
     IDirectMusicCollection *collection;
-    IDirectMusicInstrument *instrument;
+    IDirectMusicInstrument *instrument, *tmp_instrument;
     IPersistStream *persist;
     IDirectMusicPort *port;
     IDirectMusic *dmusic;
@@ -1294,14 +1299,29 @@ static void test_download_instrument(void)
 
     hr = IDirectMusicCollection_GetInstrument(collection, 0x1234, &instrument);
     ok(hr == S_OK, "got %#lx\n", hr);
+    hr = IDirectMusicInstrument_GetPatch(instrument, &patch);
+    ok(hr == S_OK, "got %#lx\n", hr);
+    ok(patch == 0x1234, "got %#lx\n", patch);
+    hr = IDirectMusicInstrument_SetPatch(instrument, 0x4321);
+    ok(hr == S_OK, "got %#lx\n", hr);
+    hr = IDirectMusicInstrument_GetPatch(instrument, &patch);
+    ok(hr == S_OK, "got %#lx\n", hr);
+    ok(patch == 0x4321, "got %#lx\n", patch);
+
+    hr = IDirectMusicCollection_GetInstrument(collection, 0x1234, &tmp_instrument);
+    ok(hr == S_OK, "got %#lx\n", hr);
+    ok(instrument == tmp_instrument, "got %p\n", tmp_instrument);
+    hr = IDirectMusicInstrument_GetPatch(tmp_instrument, &patch);
+    ok(hr == S_OK, "got %#lx\n", hr);
+    ok(patch == 0x4321, "got %#lx\n", patch);
+    IDirectMusicInstrument_Release(tmp_instrument);
 
     check_interface(instrument, &IID_IDirectMusicObject, FALSE);
     check_interface(instrument, &IID_IDirectMusicDownload, FALSE);
     check_interface(instrument, &IID_IDirectMusicDownloadedInstrument, FALSE);
 
     hr = IDirectMusicPort_DownloadInstrument(port, instrument, &downloaded, NULL, 0);
-    todo_wine ok(hr == S_OK, "got %#lx\n", hr);
-    if (hr != S_OK) goto skip_tests;
+    ok(hr == S_OK, "got %#lx\n", hr);
 
     check_interface(downloaded, &IID_IDirectMusicObject, FALSE);
     check_interface(downloaded, &IID_IDirectMusicDownload, FALSE);
@@ -1313,7 +1333,6 @@ static void test_download_instrument(void)
 
     IDirectMusicInstrument_Release(instrument);
 
-skip_tests:
     IDirectMusicCollection_Release(collection);
     IDirectMusicPort_Release(port);
     IDirectMusic_Release(dmusic);

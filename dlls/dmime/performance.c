@@ -62,32 +62,63 @@ struct performance
     DWORD procThreadId;
     BOOL procThreadTicStarted;
     CRITICAL_SECTION safe;
-    struct DMUS_PMSGItem *head;
-    struct DMUS_PMSGItem *imm_head;
 
     IReferenceClock *master_clock;
     REFERENCE_TIME init_time;
+    struct list messages;
 };
 
-typedef struct DMUS_PMSGItem DMUS_PMSGItem;
-struct DMUS_PMSGItem {
-  DMUS_PMSGItem* next;
-  DMUS_PMSGItem* prev;
-
-  REFERENCE_TIME rtItemTime;
-  BOOL bInUse;
-  DWORD cb;
-  DMUS_PMSG pMsg;
+struct message
+{
+    struct list entry;
+    DMUS_PMSG msg;
 };
 
-#define DMUS_PMSGToItem(pMSG)   ((DMUS_PMSGItem *)(((unsigned char *)pMSG) - offsetof(DMUS_PMSGItem, pMsg)))
-#define DMUS_ItemRemoveFromQueue(This,pItem) \
-{\
-  if (pItem->prev) pItem->prev->next = pItem->next;\
-  if (pItem->next) pItem->next->prev = pItem->prev;\
-  if (This->head == pItem) This->head = pItem->next;\
-  if (This->imm_head == pItem) This->imm_head = pItem->next;\
-  pItem->bInUse = FALSE;\
+static inline struct message *message_from_DMUS_PMSG(DMUS_PMSG *msg)
+{
+    return msg ? CONTAINING_RECORD(msg, struct message, msg) : NULL;
+}
+
+static HRESULT performance_process_message(struct performance *This, DMUS_PMSG *msg, DWORD *timeout)
+{
+    static const DWORD delivery_flags = DMUS_PMSGF_TOOL_IMMEDIATE | DMUS_PMSGF_TOOL_QUEUE | DMUS_PMSGF_TOOL_ATTIME;
+    IDirectMusicPerformance *performance = (IDirectMusicPerformance *)&This->IDirectMusicPerformance8_iface;
+    HRESULT hr;
+
+    do
+    {
+        REFERENCE_TIME current, offset = 0;
+        IDirectMusicTool *tool;
+
+        if (FAILED(hr = IDirectMusicPerformance_GetTime(performance, &current, NULL))) return hr;
+        if (!(tool = msg->pTool)) tool = &This->IDirectMusicTool_iface;
+
+        switch (msg->dwFlags & delivery_flags)
+        {
+        default:
+            WARN("No delivery flag found for message %p\n", msg);
+            /* fallthrough */
+        case DMUS_PMSGF_TOOL_IMMEDIATE:
+            hr = IDirectMusicTool_ProcessPMsg(tool, performance, msg);
+            break;
+        case DMUS_PMSGF_TOOL_QUEUE:
+            offset = This->dwBumperLength * 10000;
+            /* fallthrough */
+        case DMUS_PMSGF_TOOL_ATTIME:
+            if (msg->rtTime >= offset && msg->rtTime - offset >= current)
+            {
+                if (timeout) *timeout = (msg->rtTime - offset - current) / 10000;
+                return DMUS_S_REQUEUE;
+            }
+
+            hr = IDirectMusicTool_ProcessPMsg(tool, performance, msg);
+            break;
+        }
+    } while (hr == DMUS_S_REQUEUE);
+
+    if (hr == DMUS_S_FREE) hr = IDirectMusicPerformance_FreePMsg(performance, msg);
+    if (FAILED(hr)) WARN("Failed to process message, hr %#lx\n", hr);
+    return hr;
 }
 
 #define PROCESSMSG_START           (WM_APP + 0)
@@ -95,96 +126,62 @@ struct DMUS_PMSGItem {
 #define PROCESSMSG_REMOVE          (WM_APP + 2)
 #define PROCESSMSG_ADD             (WM_APP + 4)
 
+static DWORD WINAPI ProcessMsgThread(LPVOID lpParam)
+{
+    struct performance *This = lpParam;
+    DWORD timeout = INFINITE;
+    MSG msg;
+    HRESULT hr;
+    struct message *message, *next;
 
-static DMUS_PMSGItem* ProceedMsg(struct performance *This, DMUS_PMSGItem* cur) {
-  if (cur->pMsg.dwType == DMUS_PMSGT_NOTIFICATION) {
-    SetEvent(This->hNotification);
-  }	
-  DMUS_ItemRemoveFromQueue(This, cur);
-  switch (cur->pMsg.dwType) {
-  case DMUS_PMSGT_WAVE:
-  case DMUS_PMSGT_TEMPO:   
-  case DMUS_PMSGT_STOP:
-  default:
-    FIXME("Unhandled PMsg Type: %#lx\n", cur->pMsg.dwType);
-    break;
-  }
-  return cur;
-}
+    while (TRUE)
+    {
+        if (timeout > 0) MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_POSTMESSAGE | QS_SENDMESSAGE | QS_TIMER);
+        timeout = INFINITE;
 
-static DWORD WINAPI ProcessMsgThread(LPVOID lpParam) {
-  struct performance *This = lpParam;
-  DWORD timeOut = INFINITE;
-  MSG msg;
-  HRESULT hr;
-  REFERENCE_TIME rtCurTime;
-  DMUS_PMSGItem* it = NULL;
-  DMUS_PMSGItem* cur = NULL;
-  DMUS_PMSGItem* it_next = NULL;
+        EnterCriticalSection(&This->safe);
 
-  while (TRUE) {
-    DWORD dwDec = This->rtLatencyTime + This->dwBumperLength;
+        LIST_FOR_EACH_ENTRY_SAFE(message, next, &This->messages, struct message, entry)
+        {
+            list_remove(&message->entry);
+            list_init(&message->entry);
 
-    if (timeOut > 0) MsgWaitForMultipleObjects(0, NULL, FALSE, timeOut, QS_POSTMESSAGE|QS_SENDMESSAGE|QS_TIMER);
-    timeOut = INFINITE;
+            hr = performance_process_message(This, &message->msg, &timeout);
+            if (hr == DMUS_S_REQUEUE) list_add_before(&next->entry, &message->entry);
+            if (hr != S_OK) break;
+        }
 
-    EnterCriticalSection(&This->safe);
-    hr = IDirectMusicPerformance8_GetTime(&This->IDirectMusicPerformance8_iface, &rtCurTime, NULL);
-    if (FAILED(hr)) {
-      goto outrefresh;
+        LeaveCriticalSection(&This->safe);
+
+        while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE))
+        {
+            /** if hwnd we suppose that is a windows event ... */
+            if (NULL != msg.hwnd)
+            {
+                TranslateMessage(&msg);
+                DispatchMessageA(&msg);
+            }
+            else
+            {
+                switch (msg.message)
+                {
+                case WM_QUIT:
+                case PROCESSMSG_EXIT: goto outofthread;
+                case PROCESSMSG_START: break;
+                case PROCESSMSG_ADD: break;
+                case PROCESSMSG_REMOVE: break;
+                default: ERR("Unhandled message %u. Critical Path\n", msg.message); break;
+                }
+            }
+        }
+
+        /** here we should run a little of current AudioPath */
     }
-    
-    for (it = This->imm_head; NULL != it; ) {
-      it_next = it->next;
-      cur = ProceedMsg(This, it);
-      free(cur);
-      it = it_next;
-    }
-
-    for (it = This->head; NULL != it && it->rtItemTime < rtCurTime + dwDec; ) {
-      it_next = it->next;
-      cur = ProceedMsg(This, it);
-      free(cur);
-      it = it_next;
-    }
-    if (NULL != it) {
-      timeOut = ( it->rtItemTime - rtCurTime ) + This->rtLatencyTime;
-    }
-
-outrefresh:
-    LeaveCriticalSection(&This->safe);
-    
-    while (PeekMessageA(&msg, NULL, 0, 0, PM_REMOVE)) {
-      /** if hwnd we suppose that is a windows event ... */
-      if  (NULL != msg.hwnd) {
-	TranslateMessage(&msg);
-	DispatchMessageA(&msg);
-      } else {
-	switch (msg.message) {	    
-	case WM_QUIT:
-	case PROCESSMSG_EXIT:
-	  goto outofthread;
-	case PROCESSMSG_START:
-	  break;
-	case PROCESSMSG_ADD:
-	  break;
-	case PROCESSMSG_REMOVE:
-	  break;
-	default:
-	  ERR("Unhandled message %u. Critical Path\n", msg.message);
-	  break;
-	}
-      }
-    }
-
-    /** here we should run a little of current AudioPath */
-
-  }
 
 outofthread:
-  TRACE("(%p): Exiting\n", This);
-  
-  return 0;
+    TRACE("(%p): Exiting\n", This);
+
+    return 0;
 }
 
 static BOOL PostMessageToProcessMsgThread(struct performance *This, UINT iMsg) {
@@ -401,57 +398,54 @@ static HRESULT WINAPI performance_GetBumperLength(IDirectMusicPerformance8 *ifac
 
 static HRESULT WINAPI performance_SendPMsg(IDirectMusicPerformance8 *iface, DMUS_PMSG *msg)
 {
+    const DWORD delivery_flags = DMUS_PMSGF_TOOL_IMMEDIATE | DMUS_PMSGF_TOOL_QUEUE | DMUS_PMSGF_TOOL_ATTIME;
     struct performance *This = impl_from_IDirectMusicPerformance8(iface);
-    DMUS_PMSGItem *message;
-    DMUS_PMSGItem *it = NULL;
-    DMUS_PMSGItem *prev_it = NULL;
-    DMUS_PMSGItem **queue;
+    struct message *message, *next;
     HRESULT hr;
 
     FIXME("(%p, %p): semi-stub\n", This, msg);
 
-    if (!msg) return E_POINTER;
+    if (!(message = message_from_DMUS_PMSG(msg))) return E_POINTER;
     if (!This->dmusic) return DMUS_E_NO_MASTER_CLOCK;
     if (!(msg->dwFlags & (DMUS_PMSGF_MUSICTIME | DMUS_PMSGF_REFTIME))) return E_INVALIDARG;
 
-    if (msg->dwFlags & DMUS_PMSGF_TOOL_IMMEDIATE) queue = &This->imm_head;
-    else queue = &This->head;
-
-    message = DMUS_PMSGToItem(msg);
-
     EnterCriticalSection(&This->safe);
 
-    if (message->bInUse)
+    if (!list_empty(&message->entry))
         hr = DMUS_E_ALREADY_SENT;
     else
     {
-        /* TODO: Valid Flags */
-        /* TODO: DMUS_PMSGF_MUSICTIME */
-        message->rtItemTime = msg->rtTime;
-
-        for (it = *queue; NULL != it && it->rtItemTime < message->rtItemTime; it = it->next)
-            prev_it = it;
-
-        if (!prev_it)
+        if (!(msg->dwFlags & delivery_flags)) msg->dwFlags |= DMUS_PMSGF_TOOL_IMMEDIATE;
+        if (!(msg->dwFlags & DMUS_PMSGF_MUSICTIME))
         {
-            message->prev = NULL;
-            if (*queue) message->next = (*queue)->next;
-            /*assert( NULL == message->next->prev );*/
-            if (message->next) message->next->prev = message;
-            *queue = message;
+            if (FAILED(hr = IDirectMusicPerformance8_ReferenceToMusicTime(iface,
+                    msg->rtTime, &msg->mtTime)))
+                goto done;
+            msg->dwFlags |= DMUS_PMSGF_MUSICTIME;
         }
-        else
+        if (!(msg->dwFlags & DMUS_PMSGF_REFTIME))
         {
-            message->prev = prev_it;
-            message->next = prev_it->next;
-            prev_it->next = message;
-            if (message->next) message->next->prev = message;
+            if (FAILED(hr = IDirectMusicPerformance8_MusicToReferenceTime(iface,
+                    msg->mtTime, &msg->rtTime)))
+                goto done;
+            msg->dwFlags |= DMUS_PMSGF_REFTIME;
         }
 
-        message->bInUse = TRUE;
+        if (msg->dwFlags & DMUS_PMSGF_TOOL_IMMEDIATE)
+        {
+            hr = performance_process_message(This, &message->msg, NULL);
+            if (hr != DMUS_S_REQUEUE) goto done;
+        }
+
+        LIST_FOR_EACH_ENTRY(next, &This->messages, struct message, entry)
+            if (next->msg.rtTime >= message->msg.rtTime) break;
+        list_add_before(&next->entry, &message->entry);
+        PostThreadMessageW(This->procThreadId, PROCESSMSG_ADD, 0, 0);
+
         hr = S_OK;
     }
 
+done:
     LeaveCriticalSection(&This->safe);
 
     return hr;
@@ -524,16 +518,17 @@ static HRESULT WINAPI performance_GetTime(IDirectMusicPerformance8 *iface, REFER
 static HRESULT WINAPI performance_AllocPMsg(IDirectMusicPerformance8 *iface, ULONG size, DMUS_PMSG **msg)
 {
     struct performance *This = impl_from_IDirectMusicPerformance8(iface);
-    DMUS_PMSGItem *message;
+    struct message *message;
 
     TRACE("(%p, %ld, %p)\n", This, size, msg);
 
     if (!msg) return E_POINTER;
     if (size < sizeof(DMUS_PMSG)) return E_INVALIDARG;
 
-    if (!(message = calloc(1, size - sizeof(DMUS_PMSG) + sizeof(DMUS_PMSGItem)))) return E_OUTOFMEMORY;
-    message->pMsg.dwSize = size;
-    *msg = &message->pMsg;
+    if (!(message = calloc(1, size - sizeof(DMUS_PMSG) + sizeof(struct message)))) return E_OUTOFMEMORY;
+    message->msg.dwSize = size;
+    list_init(&message->entry);
+    *msg = &message->msg;
 
     return S_OK;
 }
@@ -541,16 +536,15 @@ static HRESULT WINAPI performance_AllocPMsg(IDirectMusicPerformance8 *iface, ULO
 static HRESULT WINAPI performance_FreePMsg(IDirectMusicPerformance8 *iface, DMUS_PMSG *msg)
 {
     struct performance *This = impl_from_IDirectMusicPerformance8(iface);
-    DMUS_PMSGItem *message;
+    struct message *message;
     HRESULT hr;
 
     TRACE("(%p, %p)\n", This, msg);
 
-    if (!msg) return E_POINTER;
-    message = DMUS_PMSGToItem(msg);
+    if (!(message = message_from_DMUS_PMSG(msg))) return E_POINTER;
 
     EnterCriticalSection(&This->safe);
-    hr = message->bInUse ? DMUS_E_CANNOT_FREE : S_OK;
+    hr = !list_empty(&message->entry) ? DMUS_E_CANNOT_FREE : S_OK;
     LeaveCriticalSection(&This->safe);
 
     if (SUCCEEDED(hr))
@@ -1460,8 +1454,20 @@ static HRESULT WINAPI performance_tool_ProcessPMsg(IDirectMusicTool *iface,
         IDirectMusicPerformance *performance, DMUS_PMSG *msg)
 {
     struct performance *This = impl_from_IDirectMusicTool(iface);
-    FIXME("(%p, %p, %p): stub\n", This, performance, msg);
-    return E_NOTIMPL;
+
+    FIXME("(%p, %p, %p): semi-stub\n", This, performance, msg);
+
+    switch (msg->dwType)
+    {
+    case DMUS_PMSGT_NOTIFICATION:
+        SetEvent(This->hNotification);
+        /* fallthrough */
+    default:
+        FIXME("Unhandled message type %#lx\n", msg->dwType);
+        break;
+    }
+
+    return DMUS_S_FREE;
 }
 
 static HRESULT WINAPI performance_tool_Flush(IDirectMusicTool *iface,
@@ -1504,6 +1510,8 @@ HRESULT create_dmperformance(REFIID iid, void **ret_iface)
     InitializeCriticalSection(&obj->safe);
     obj->safe.DebugInfo->Spare[0] = (DWORD_PTR)(__FILE__ ": performance->safe");
     wine_rb_init(&obj->pchannels, pchannel_block_compare);
+
+    list_init(&obj->messages);
 
     obj->rtLatencyTime  = 100;  /* 100 ms TO FIX */
     obj->dwBumperLength =   50; /* 50 ms default */
