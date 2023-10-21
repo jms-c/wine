@@ -45,10 +45,30 @@ struct instrument_entry
     struct list entry;
     DMUS_IO_INSTRUMENT instrument;
     IDirectMusicCollection *collection;
+
+    IDirectMusicDownloadedInstrument *download;
+    IDirectMusicPort *download_port;
 };
+
+static HRESULT instrument_entry_unload(struct instrument_entry *entry)
+{
+    HRESULT hr;
+
+    if (!entry->download) return S_OK;
+
+    if (FAILED(hr = IDirectMusicPort_UnloadInstrument(entry->download_port, entry->download)))
+        WARN("Failed to unload entry instrument, hr %#lx\n", hr);
+    IDirectMusicDownloadedInstrument_Release(entry->download);
+    entry->download = NULL;
+    IDirectMusicPort_Release(entry->download_port);
+    entry->download_port = NULL;
+
+    return hr;
+}
 
 static void instrument_entry_destroy(struct instrument_entry *entry)
 {
+    instrument_entry_unload(entry);
     if (entry->collection) IDirectMusicCollection_Release(entry->collection);
     free(entry);
 }
@@ -59,6 +79,7 @@ struct band
     struct dmobject dmobj;
     LONG ref;
     struct list instruments;
+    IDirectMusicCollection *collection;
 };
 
 static inline struct band *impl_from_IDirectMusicBand(IDirectMusicBand *iface)
@@ -117,6 +138,7 @@ static ULONG WINAPI band_Release(IDirectMusicBand *iface)
             instrument_entry_destroy(entry);
         }
 
+        if (This->collection) IDirectMusicCollection_Release(This->collection);
         free(This);
     }
 
@@ -148,19 +170,51 @@ static HRESULT WINAPI band_CreateSegment(IDirectMusicBand *iface,
 }
 
 static HRESULT WINAPI band_Download(IDirectMusicBand *iface,
-        IDirectMusicPerformance *pPerformance)
+        IDirectMusicPerformance *performance)
 {
-        struct band *This = impl_from_IDirectMusicBand(iface);
-	FIXME("(%p, %p): stub\n", This, pPerformance);
-	return S_OK;
+    struct band *This = impl_from_IDirectMusicBand(iface);
+    struct instrument_entry *entry;
+    HRESULT hr = S_OK;
+
+    TRACE("(%p, %p)\n", This, performance);
+
+    LIST_FOR_EACH_ENTRY(entry, &This->instruments, struct instrument_entry, entry)
+    {
+        IDirectMusicCollection *collection;
+        IDirectMusicInstrument *instrument;
+
+        if (FAILED(hr = instrument_entry_unload(entry))) break;
+        if (!(collection = entry->collection) && !(collection = This->collection)) continue;
+
+        if (SUCCEEDED(hr = IDirectMusicCollection_GetInstrument(collection, entry->instrument.dwPatch, &instrument)))
+        {
+            hr = IDirectMusicPerformance_DownloadInstrument(performance, instrument, entry->instrument.dwPChannel,
+                        &entry->download, NULL, 0, &entry->download_port, NULL, NULL);
+            IDirectMusicInstrument_Release(instrument);
+        }
+
+        if (FAILED(hr)) break;
+    }
+
+    if (FAILED(hr)) WARN("Failed to download instruments, hr %#lx\n", hr);
+    return hr;
 }
 
-static HRESULT WINAPI band_Unload(IDirectMusicBand *iface,
-        IDirectMusicPerformance *pPerformance)
+static HRESULT WINAPI band_Unload(IDirectMusicBand *iface, IDirectMusicPerformance *performance)
 {
-        struct band *This = impl_from_IDirectMusicBand(iface);
-	FIXME("(%p, %p): stub\n", This, pPerformance);
-	return S_OK;
+    struct band *This = impl_from_IDirectMusicBand(iface);
+    struct instrument_entry *entry;
+    HRESULT hr = S_OK;
+
+	TRACE("(%p, %p)\n", This, performance);
+
+    if (performance) FIXME("performance parameter not implemented\n");
+
+    LIST_FOR_EACH_ENTRY(entry, &This->instruments, struct instrument_entry, entry)
+        if (FAILED(hr = instrument_entry_unload(entry))) break;
+
+    if (FAILED(hr)) WARN("Failed to unload instruments, hr %#lx\n", hr);
+    return hr;
 }
 
 static const IDirectMusicBandVtbl band_vtbl =
@@ -336,10 +390,22 @@ static inline struct band *impl_from_IPersistStream(IPersistStream *iface)
 static HRESULT WINAPI band_persist_stream_Load(IPersistStream *iface, IStream *stream)
 {
     struct band *This = impl_from_IPersistStream(iface);
+    DMUS_OBJECTDESC default_desc =
+    {
+        .dwSize = sizeof(DMUS_OBJECTDESC),
+        .dwValidData = DMUS_OBJ_OBJECT | DMUS_OBJ_CLASS,
+        .guidClass = CLSID_DirectMusicCollection,
+        .guidObject = GUID_DefaultGMCollection,
+    };
     struct chunk_entry chunk = {0};
     HRESULT hr;
 
     TRACE("%p, %p\n", iface, stream);
+
+    if (This->collection) IDirectMusicCollection_Release(This->collection);
+    if (FAILED(hr = stream_get_object(stream, &default_desc, &IID_IDirectMusicCollection,
+            (void **)&This->collection)))
+        WARN("Failed to load default collection from loader, hr %#lx\n", hr);
 
     if ((hr = stream_get_chunk(stream, &chunk)) == S_OK)
     {
@@ -407,4 +473,58 @@ HRESULT create_dmband(REFIID lpcGUID, void **ppobj)
   IDirectMusicBand_Release(&obj->IDirectMusicBand_iface);
 
   return hr;
+}
+
+HRESULT band_connect_to_collection(IDirectMusicBand *iface, IDirectMusicCollection *collection)
+{
+    struct band *This = impl_from_IDirectMusicBand(iface);
+
+    TRACE("%p, %p\n", iface, collection);
+
+    if (This->collection) IDirectMusicCollection_Release(This->collection);
+    if ((This->collection = collection)) IDirectMusicCollection_AddRef(This->collection);
+
+    return S_OK;
+}
+
+HRESULT band_send_messages(IDirectMusicBand *iface, IDirectMusicPerformance *performance,
+        IDirectMusicGraph *graph, MUSIC_TIME time, DWORD track_id)
+{
+    struct band *This = impl_from_IDirectMusicBand(iface);
+    struct instrument_entry *entry;
+    HRESULT hr = S_OK;
+
+    LIST_FOR_EACH_ENTRY_REV(entry, &This->instruments, struct instrument_entry, entry)
+    {
+        DWORD patch = entry->instrument.dwPatch;
+        DMUS_PATCH_PMSG *msg;
+
+        if (FAILED(hr = IDirectMusicPerformance_AllocPMsg(performance, sizeof(*msg),
+                (DMUS_PMSG **)&msg)))
+            break;
+
+        msg->mtTime = time;
+        msg->dwFlags = DMUS_PMSGF_MUSICTIME;
+        msg->dwPChannel = entry->instrument.dwPChannel;
+        msg->dwVirtualTrackID = track_id;
+        msg->dwType = DMUS_PMSGT_PATCH;
+        msg->dwGroupID = 1;
+        msg->byInstrument = entry->instrument.dwPatch;
+
+        msg->byInstrument = patch & 0x7F;
+        patch >>= 8;
+        msg->byLSB = patch & 0x7f;
+        patch >>= 8;
+        msg->byMSB = patch & 0x7f;
+        patch >>= 8;
+
+        if (FAILED(hr = IDirectMusicGraph_StampPMsg(graph, (DMUS_PMSG *)msg))
+                || FAILED(hr = IDirectMusicPerformance_SendPMsg(performance, (DMUS_PMSG *)msg)))
+        {
+            IDirectMusicPerformance_FreePMsg(performance, (DMUS_PMSG *)msg);
+            break;
+        }
+    }
+
+    return hr;
 }

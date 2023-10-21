@@ -78,6 +78,7 @@ enum wined3d_gl_extension
     ARB_FRAGMENT_COORD_CONVENTIONS,
     ARB_FRAGMENT_LAYER_VIEWPORT,
     ARB_FRAGMENT_PROGRAM,
+    ARB_FRAGMENT_PROGRAM_SHADOW,
     ARB_FRAGMENT_SHADER,
     ARB_FRAMEBUFFER_NO_ATTACHMENTS,
     ARB_FRAMEBUFFER_OBJECT,
@@ -276,7 +277,7 @@ struct wined3d_gl_limits
 {
     unsigned int buffers;
     unsigned int lights;
-    unsigned int textures;
+    unsigned int ffp_textures;
     unsigned int texture_coords;
     unsigned int uniform_blocks[WINED3D_SHADER_TYPE_COUNT];
     unsigned int samplers[WINED3D_SHADER_TYPE_COUNT];
