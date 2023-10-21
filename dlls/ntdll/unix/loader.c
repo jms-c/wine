@@ -375,6 +375,7 @@ static const BOOL use_preloader = TRUE;
 static const BOOL use_preloader = FALSE;
 #endif
 
+BOOL localsystem_sid;
 static const char *bin_dir;
 static const char *dll_dir;
 static const char *ntdll_dir;
@@ -2090,6 +2091,14 @@ static void start_main_thread(void)
     signal_alloc_thread( teb );
     dbg_init();
     startup_info_size = server_init_process();
+    // Implement webview2 hack
+    if (main_argc > 1 && strstr(main_argv[1], "MicrosoftEdgeUpdate.exe"))
+    {
+        ERR("HACK: reporting LocalSystem account SID.\n");
+        localsystem_sid = TRUE;
+    }
+
+
     virtual_map_user_shared_data();
     init_cpu_info();
     init_files();
