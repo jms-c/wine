@@ -3780,9 +3780,7 @@ static void png_metadata_reader(GpBitmap *bitmap, IWICBitmapDecoder *decoder, UI
 
         IWICMetadataReader_Release(reader);
     }
-
-    if (seen_text)
-        heap_free(seen_text);
+    heap_free(seen_text);
 
     png_add_unit_properties(frame, bitmap);
 
@@ -6066,7 +6064,7 @@ GpStatus WINGDIPAPI GdipInitializePalette(ColorPalette *palette,
         ColorPalette *wic_palette;
         GpStatus status = Ok;
 
-        wic_palette = get_palette(NULL, type);
+        wic_palette = get_palette(NULL, (WICBitmapPaletteType)type);
         if (!wic_palette) return OutOfMemory;
 
         if (palette->Count >= wic_palette->Count)

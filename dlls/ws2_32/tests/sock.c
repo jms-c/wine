@@ -7626,16 +7626,21 @@ static void test_WSARecv(void)
 
     memset(&ov, 0, sizeof(ov));
     flags = 0;
-    bufs[0].len = 2;
+    bufs[0].len = 1;
     bufs[0].buf = buf;
 
-    /* Send 4 bytes and receive in two calls of 2 */
+    /* Send 2 bytes and receive in two calls of 1 */
     SetLastError(0xdeadbeef);
-    iret = send(src, "test", 4, 0);
-    ok(iret == 4, "Expected 4, got %d\n", iret);
+    iret = send(src, "ab", 2, 0);
+    ok(iret == 2, "got %d\n", iret);
     ok(GetLastError() == ERROR_SUCCESS, "Expected 0, got %ld\n", GetLastError());
     SetLastError(0xdeadbeef);
     bytesReturned = 0xdeadbeef;
+
+    /* Non-overlapped WSARecv() performs an alertable wait (tested below), but
+     * not if it completes synchronously. Make sure it completes synchronously
+     * by polling for input. */
+    check_poll_mask(dest, POLLRDNORM, POLLRDNORM);
 
     apc_count = 0;
     dwret = QueueUserAPC(apc_func, GetCurrentThread(), (ULONG_PTR)&apc_count);
@@ -7643,7 +7648,7 @@ static void test_WSARecv(void)
 
     iret = WSARecv(dest, bufs, 1, &bytesReturned, &flags, NULL, NULL);
     ok(!iret, "Expected 0, got %d\n", iret);
-    ok(bytesReturned == 2, "Expected 2, got %ld\n", bytesReturned);
+    ok(bytesReturned == 1, "got %ld\n", bytesReturned);
     ok(GetLastError() == ERROR_SUCCESS, "Expected 0, got %ld\n", GetLastError());
 
     ok(!apc_count, "got apc_count %u.\n", apc_count);
@@ -7654,7 +7659,7 @@ static void test_WSARecv(void)
     bytesReturned = 0xdeadbeef;
     iret = WSARecv(dest, bufs, 1, &bytesReturned, &flags, NULL, NULL);
     ok(!iret, "Expected 0, got %d\n", iret);
-    ok(bytesReturned == 2, "Expected 2, got %ld\n", bytesReturned);
+    ok(bytesReturned == 1, "got %ld\n", bytesReturned);
     ok(GetLastError() == ERROR_SUCCESS, "Expected 0, got %ld\n", GetLastError());
 
     bufs[0].len = 4;
@@ -13997,6 +14002,36 @@ static void test_tcp_sendto_recvfrom(void)
     closesocket(server);
 }
 
+/* Regression test for an internal bug affecting wget.exe. */
+static void test_select_after_WSAEventSelect(void)
+{
+    SOCKET client, server;
+    HANDLE event;
+    int ret;
+
+    tcp_socketpair(&client, &server);
+    event = CreateEventA(NULL, FALSE, FALSE, NULL);
+
+    ret = WSAEventSelect(client, event, FD_READ);
+    ok(!ret, "got error %u\n", WSAGetLastError());
+
+    ret = send(server, "data", 4, 0);
+    ok(ret == 4, "got %d\n", ret);
+
+    ret = WaitForSingleObject(event, 1000);
+    ok(!ret, "got %d\n", ret);
+
+    /* Poll. This must not trigger any events to be signalled again. */
+    check_poll(client, POLLRDNORM | POLLWRNORM);
+
+    ret = WaitForSingleObject(event, 0);
+    ok(ret == WAIT_TIMEOUT, "got %d\n", ret);
+
+    CloseHandle(event);
+    closesocket(server);
+    closesocket(client);
+}
+
 START_TEST( sock )
 {
     int i;
@@ -14056,6 +14091,7 @@ START_TEST( sock )
     test_write_watch();
 
     test_events();
+    test_select_after_WSAEventSelect();
 
     test_ipv6only();
     test_TransmitFile();

@@ -1361,11 +1361,11 @@ static HDC create_printer_dc(int scale, BOOL reset)
     if (!pOpenPrinterA( buffer, &hprn, NULL )) goto done;
 
     pGetPrinterA( hprn, 2, NULL, 0, &len );
-    pbuf = HeapAlloc( GetProcessHeap(), 0, len );
+    pbuf = malloc( len );
     if (!pGetPrinterA( hprn, 2, (LPBYTE)pbuf, len, &len )) goto done;
 
     pGetPrinterDriverA( hprn, NULL, 3, NULL, 0, &len );
-    dbuf = HeapAlloc( GetProcessHeap(), 0, len );
+    dbuf = malloc( len );
     if (!pGetPrinterDriverA( hprn, NULL, 3, (LPBYTE)dbuf, len, &len )) goto done;
 
     pbuf->pDevMode->dmScale = scale;
@@ -1378,8 +1378,8 @@ static HDC create_printer_dc(int scale, BOOL reset)
 
     if (reset) ResetDCA( hdc, pbuf->pDevMode );
 done:
-    HeapFree( GetProcessHeap(), 0, dbuf );
-    HeapFree( GetProcessHeap(), 0, pbuf );
+    free( dbuf );
+    free( pbuf );
     if (hprn) pClosePrinter( hprn );
     if (winspool) FreeLibrary( winspool );
     if (!hdc) skip( "could not create a DC for the default printer\n" );

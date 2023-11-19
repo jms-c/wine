@@ -802,6 +802,9 @@ static void output_import_thunk( const char *name, const char *table, int pos )
         output( "\tldr x16, [x16, #%u]\n", pos & 0x7fff );
         output( "\tbr x16\n" );
         break;
+    case CPU_ARM64EC:
+        assert( 0 );
+        break;
     }
     output_function_size( name );
 }
@@ -1121,6 +1124,9 @@ static void output_delayed_import_thunks( const DLLSPEC *spec )
             output( "\tldp x29, x30, [sp],#80\n" );
             output( "\tbr x16\n" );
             break;
+        case CPU_ARM64EC:
+            assert( 0 );
+            break;
         }
         output_cfi( ".cfi_endproc" );
         output_function_size( module_func );
@@ -1169,6 +1175,9 @@ static void output_delayed_import_thunks( const DLLSPEC *spec )
                 output( "\tadd x16, x16, #%s\n", arm64_pageoff(".L__wine_delay_IAT") );
                 if (iat_pos) output( "\tadd x16, x16, #%u\n", iat_pos );
                 output( "\tb %s\n", asm_name(module_func) );
+                break;
+            case CPU_ARM64EC:
+                assert( 0 );
                 break;
             }
             iat_pos += get_ptr_size();
@@ -1337,7 +1346,8 @@ void output_stubs( DLLSPEC *spec )
             }
             break;
         case CPU_ARM64:
-            output_seh( ".seh_proc %s", asm_name(name) );
+        case CPU_ARM64EC:
+            output_seh( ".seh_proc %s", arm64_name(name) );
             output_seh( ".seh_endprologue" );
             output( "\tadrp x0, %s\n", arm64_page(".L__wine_spec_file_name") );
             output( "\tadd x0, x0, #%s\n", arm64_pageoff(".L__wine_spec_file_name") );
@@ -1350,11 +1360,9 @@ void output_stubs( DLLSPEC *spec )
             }
             else
                 output( "\tmov x1, %u\n", odp->ordinal );
-            output( "\tb %s\n", asm_name("__wine_spec_unimplemented_stub") );
+            output( "\tb %s\n", arm64_name("__wine_spec_unimplemented_stub") );
             output_seh( ".seh_endproc" );
             break;
-        default:
-            assert(0);
         }
         output_function_size( name );
     }
@@ -1467,7 +1475,8 @@ void output_syscalls( DLLSPEC *spec )
             output( "\tbx lr\n" );
             break;
         case CPU_ARM64:
-            output_seh( ".seh_proc %s", asm_name(name) );
+        case CPU_ARM64EC:
+            output_seh( ".seh_proc %s", arm64_name(name) );
             output_seh( ".seh_endprologue" );
             output( "\tmov x8, #%u\n", id );
             output( "\tmov x9, x30\n" );
@@ -1478,8 +1487,6 @@ void output_syscalls( DLLSPEC *spec )
             output( "1:\t.quad %s\n", asm_name("__wine_syscall_dispatcher") );
             output_seh( ".seh_endproc" );
             break;
-        default:
-            assert(0);
         }
         output_function_size( name );
     }
@@ -1512,15 +1519,6 @@ void output_syscalls( DLLSPEC *spec )
     default:
         break;
     }
-    output( "\t.data\n" );
-    output( "\t.balign %u\n", get_ptr_size() );
-    output( "%s\n", asm_globl("__wine_syscall_dispatcher") );
-    output( "\t%s 0\n", get_asm_ptr_keyword() );    /* dispatcher */
-    output( "\t.long 0xca110001\n" );               /* version */
-    output( "\t.short %u\n", spec->syscall_table ); /* id */
-    output( "\t.short %u\n", count );               /* limit */
-    for (i = 0; i < count; i++) output( "\t.short %u\n", syscalls[i]->hint );
-    for (i = 0; i < count; i++) output( "\t.byte %u\n", get_args_size( syscalls[i] ));
 }
 
 
@@ -1561,6 +1559,20 @@ static void assemble_files( const char *prefix )
     }
 }
 
+static const char *get_target_machine(void)
+{
+    static const char *machine_names[] =
+    {
+        [CPU_i386]    = "x86",
+        [CPU_x86_64]  = "x64",
+        [CPU_ARM]     = "arm",
+        [CPU_ARM64]   = "arm64",
+        [CPU_ARM64EC] = "arm64ec",
+    };
+
+    return machine_names[target.cpu];
+}
+
 /* build a library from the current asm files and any additional object files in argv */
 void output_static_lib( const char *output_name, struct strarray files, int create )
 {
@@ -1576,6 +1588,7 @@ void output_static_lib( const char *output_name, struct strarray files, int crea
     {
         args = find_link_tool();
         strarray_add( &args, "/lib" );
+        strarray_add( &args, strmake( "-machine:%s", get_target_machine() ));
         strarray_add( &args, strmake( "-out:%s", output_name ));
     }
     strarray_addall( &args, as_files );
@@ -1627,6 +1640,10 @@ static void build_dlltool_import_lib( const char *lib_name, DLLSPEC *spec, struc
         case CPU_ARM64:
             strarray_add( &args, "-m" );
             strarray_add( &args, "arm64" );
+            break;
+        case CPU_ARM64EC:
+            strarray_add( &args, "-m" );
+            strarray_add( &args, "arm64ec" );
             break;
         default:
             break;
@@ -1734,6 +1751,9 @@ static void build_windows_import_lib( const char *lib_name, DLLSPEC *spec, struc
             output( "\tldp x29, x30, [sp], #80\n" );
             output( "\tbr x16\n" );
             output_seh( ".seh_endproc" );
+            break;
+        case CPU_ARM64EC:
+            assert( 0 );
             break;
         }
         output_function_size( delay_load );
@@ -1877,6 +1897,9 @@ static void build_windows_import_lib( const char *lib_name, DLLSPEC *spec, struc
                     output( "\tadd x16, x16, #%s\n", arm64_pageoff( asm_name( imp_name ) ) );
                     output( "\tb %s\n", asm_name( delay_load ) );
                 }
+                break;
+            case CPU_ARM64EC:
+                assert( 0 );
                 break;
             }
 

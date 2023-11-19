@@ -18,7 +18,7 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
  */
 
-#ifdef __x86_64__
+#if defined(__x86_64__) && !defined(__arm64ec__)
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -711,10 +711,7 @@ void WINAPI KiUserCallbackDispatcher( ULONG id, void *args, ULONG len )
  */
 BOOLEAN WINAPI RtlIsEcCode( const void *ptr )
 {
-    const UINT64 *map = (const UINT64 *)NtCurrentTeb()->Peb->EcCodeBitMap;
-    ULONG_PTR page = (ULONG_PTR)ptr / page_size;
-    if (!map) return FALSE;
-    return (map[page / 64] >> (page & 63)) & 1;
+    return FALSE;
 }
 
 
@@ -1683,7 +1680,7 @@ void WINAPI RtlUserThreadStart( PRTL_THREAD_START_ROUTINE entry, void *arg )
 /***********************************************************************
  *           signal_start_thread
  */
-extern void CDECL DECLSPEC_NORETURN signal_start_thread( CONTEXT *ctx ) DECLSPEC_HIDDEN;
+extern void CDECL DECLSPEC_NORETURN signal_start_thread( CONTEXT *ctx );
 __ASM_GLOBAL_FUNC( signal_start_thread,
                    "movq %rcx,%rbx\n\t"        /* context */
                    /* clear the thread stack */

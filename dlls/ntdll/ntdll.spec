@@ -1175,6 +1175,7 @@
 @ stdcall WinSqmIncrementDWORD(long long long)
 @ stdcall WinSqmIsOptedIn()
 @ stdcall WinSqmSetDWORD(ptr long long)
+@ stdcall WinSqmSetIfMaxDWORD(long long long)
 @ stdcall WinSqmStartSession(ptr long long)
 @ extern -arch=win32 Wow64Transition
 @ stdcall -private -syscall ZwAcceptConnectPort(ptr long ptr long ptr ptr) NtAcceptConnectPort
@@ -1505,6 +1506,7 @@
 @ cdecl -private -arch=i386 _CIsqrt()
 @ stdcall -arch=!i386 __C_specific_handler(ptr long ptr ptr)
 @ cdecl -arch=!i386 -norelay __chkstk()
+@ cdecl -arch=arm64ec -norelay __chkstk_arm64ec()
 @ cdecl __isascii(long)
 @ cdecl __iscsym(long)
 @ cdecl __iscsymf(long)

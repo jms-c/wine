@@ -5179,8 +5179,8 @@ GpStatus gdip_format_string(HDC hdc,
     if (!format)
         format = &default_drawstring_format;
 
-    nwidth = rect->Width;
-    nheight = rect->Height;
+    nwidth = (int)(rect->Width + 0.005f);
+    nheight = (int)(rect->Height + 0.005f);
     if (ignore_empty_clip)
     {
         if (!nwidth) nwidth = INT_MAX;
@@ -6164,11 +6164,14 @@ GpStatus WINGDIPAPI GdipSetPageScale(GpGraphics *graphics, REAL scale)
 
     TRACE("(%p, %.2f)\n", graphics, scale);
 
-    if(!graphics || (scale <= 0.0))
+    if(!graphics)
         return InvalidParameter;
 
     if(graphics->busy)
         return ObjectBusy;
+
+    if(scale <= 0.0)
+        return InvalidParameter;
 
     if (is_metafile_graphics(graphics))
     {
@@ -6194,7 +6197,7 @@ GpStatus WINGDIPAPI GdipSetPageUnit(GpGraphics *graphics, GpUnit unit)
     if(graphics->busy)
         return ObjectBusy;
 
-    if(unit == UnitWorld)
+    if(unit == UnitWorld || unit > UnitMillimeter)
         return InvalidParameter;
 
     if (is_metafile_graphics(graphics))
@@ -7536,14 +7539,27 @@ cleanup:
 
 GpStatus WINGDIPAPI GdipResetPageTransform(GpGraphics *graphics)
 {
-    static int calls;
+    GpStatus stat;
 
-    TRACE("(%p) stub\n", graphics);
+    TRACE("(%p)\n", graphics);
 
-    if(!(calls++))
-        FIXME("not implemented\n");
+    if(!graphics)
+        return InvalidParameter;
 
-    return NotImplemented;
+    if(graphics->busy)
+        return ObjectBusy;
+
+    if (is_metafile_graphics(graphics))
+    {
+        stat = METAFILE_SetPageTransform((GpMetafile*)graphics->image, UnitDisplay, 1.0);
+        if (stat != Ok)
+            return stat;
+    }
+
+    graphics->scale = 1.0;
+    graphics->unit = UnitDisplay;
+
+    return Ok;
 }
 
 GpStatus WINGDIPAPI GdipGraphicsSetAbort(GpGraphics *graphics, GdiplusAbort *pabort)

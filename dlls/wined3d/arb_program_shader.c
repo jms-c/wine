@@ -490,7 +490,7 @@ static void shader_arb_load_np2fixup_constants(const struct arb_ps_np2fixup_info
     while (active)
     {
         i = wined3d_bit_scan(&active);
-        if (!(tex = state->textures[i]))
+        if (!(tex = wined3d_state_get_ffp_texture(state, i)))
         {
             ERR("Nonexistent texture is flagged for NP2 texcoord fixup.\n");
             continue;
@@ -6048,9 +6048,9 @@ static void alpha_test_arbfp(struct wined3d_context *context, const struct wined
 
 static void color_key_arbfp(struct wined3d_context *context, const struct wined3d_state *state, DWORD state_id)
 {
+    const struct wined3d_texture *texture = wined3d_state_get_ffp_texture(state, 0);
     struct wined3d_context_gl *context_gl = wined3d_context_gl(context);
     const struct wined3d_gl_info *gl_info = context_gl->gl_info;
-    const struct wined3d_texture *texture = state->textures[0];
     struct wined3d_device *device = context->device;
     struct wined3d_color float_key[2];
 
@@ -6927,7 +6927,7 @@ const struct wined3d_fragment_pipe_ops arbfp_fragment_pipeline =
 struct arbfp_blit_type
 {
     enum complex_fixup fixup : 4;
-    enum wined3d_gl_resource_type res_type : 3;
+    unsigned int res_type : 3;
     DWORD use_color_key : 1;
     DWORD padding : 24;
 };

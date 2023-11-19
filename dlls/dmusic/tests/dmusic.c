@@ -1078,7 +1078,7 @@ static void test_port_download(void)
     ok(hr == S_OK, "got %#lx\n", hr);
     size = 0xdeadbeef;
     buffer = invalid_ptr;
-    hr = IDirectMusicDownload_GetBuffer(download, (void **)&buffer, &size);
+    hr = IDirectMusicDownload_GetBuffer(download, &buffer, &size);
     ok(hr == S_OK, "got %#lx\n", hr);
     ok(size == 1, "got %#lx\n", size);
     ok(buffer != invalid_ptr, "got %p\n", buffer);
@@ -1608,6 +1608,11 @@ static void test_default_gm_collection(void)
     ok(hr == S_OK, "got %#lx\n", hr);
 
     hr = IDirectMusicLoader_GetObject(loader, &desc, &IID_IDirectMusicCollection, (void **)&collection);
+    if (hr == DMUS_E_LOADER_NOFILENAME)
+    {
+        skip("Failed to open default GM collection, skipping tests. Missing system SoundFont?\n");
+        goto skip_tests;
+    }
     ok(hr == S_OK, "got %#lx\n", hr);
 
     for (i = 0; hr == S_OK && i < ARRAY_SIZE(results); i++)
@@ -1635,6 +1640,8 @@ static void test_default_gm_collection(void)
     }
 
     IDirectMusicCollection_Release(collection);
+
+skip_tests:
     IDirectMusicLoader_Release(loader);
 }
 

@@ -112,10 +112,7 @@ static ULONG WINAPI segment_Release(IDirectMusicSegment8 *iface)
             list_remove(&entry->entry);
             track_entry_destroy(entry);
         }
-
-        if (This->wave_data)
-            free(This->wave_data);
-
+        free(This->wave_data);
         free(This);
     }
 
@@ -816,7 +813,6 @@ static HRESULT WINAPI segment_persist_stream_Load(IPersistStream *iface, IStream
         case MAKE_IDTYPE(FOURCC_RIFF, mmioFOURCC('W','A','V','E')):
         {
             IDirectMusicTrack8 *track;
-            HRESULT hr;
 
             TRACE("Loading segment %p from wave file\n", This);
 
@@ -833,6 +829,7 @@ static HRESULT WINAPI segment_persist_stream_Load(IPersistStream *iface, IStream
         }
     }
 
+    stream_skip_chunk(stream, &chunk);
     if (FAILED(hr))
     {
         WARN("Failed to load segment from stream %p, hr %#lx\n", stream, hr);
