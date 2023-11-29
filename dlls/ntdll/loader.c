@@ -1066,6 +1066,7 @@ void * WINAPI RtlFindExportedRoutineByName( HMODULE module, const char *name )
     const DWORD *functions;
     DWORD exp_size;
     int ordinal;
+    void *proc;
 
     exports = RtlImageDirectoryEntryToData( module, TRUE, IMAGE_DIRECTORY_ENTRY_EXPORT, &exp_size );
     if (!exports || exp_size < sizeof(*exports)) return NULL;
@@ -1074,7 +1075,12 @@ void * WINAPI RtlFindExportedRoutineByName( HMODULE module, const char *name )
     if (ordinal >= exports->NumberOfFunctions) return NULL;
     functions = get_rva( module, exports->AddressOfFunctions );
     if (!functions[ordinal]) return NULL;
-    return get_rva( module, functions[ordinal] );
+    proc = get_rva( module, functions[ordinal] );
+    /* if the address falls into the export dir, it's a forward */
+    if (((const char *)proc >= (const char *)exports) &&
+        ((const char *)proc < (const char *)exports + exp_size))
+        return NULL;
+    return proc;
 }
 
 
@@ -4268,7 +4274,6 @@ void loader_init( CONTEXT *context, void **entry )
     if (!imports_fixup_done)
     {
         MEMORY_BASIC_INFORMATION meminfo;
-        ANSI_STRING base_thread_init_thunk = RTL_CONSTANT_STRING( "BaseThreadInitThunk" );
         ANSI_STRING ctrl_routine = RTL_CONSTANT_STRING( "CtrlRoutine" );
         WINE_MODREF *kernel32;
         PEB *peb = NtCurrentTeb()->Peb;
@@ -4305,12 +4310,7 @@ void loader_init( CONTEXT *context, void **entry )
             NtTerminateProcess( GetCurrentProcess(), status );
         }
         node_kernel32 = kernel32->ldr.DdagNode;
-        if ((status = LdrGetProcedureAddress( kernel32->ldr.DllBase, &base_thread_init_thunk,
-                                              0, (void **)&pBaseThreadInitThunk )) != STATUS_SUCCESS)
-        {
-            MESSAGE( "wine: could not find BaseThreadInitThunk in kernel32.dll, status %lx\n", status );
-            NtTerminateProcess( GetCurrentProcess(), status );
-        }
+        pBaseThreadInitThunk = RtlFindExportedRoutineByName( kernel32->ldr.DllBase, "BaseThreadInitThunk" );
         LdrGetProcedureAddress( kernel32->ldr.DllBase, &ctrl_routine, 0, (void **)&pCtrlRoutine );
 
         actctx_init();

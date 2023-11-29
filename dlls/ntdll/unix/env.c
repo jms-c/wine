@@ -799,6 +799,7 @@ static void init_locale(void)
     struct locale_nls_header *header;
     const NLS_LOCALE_HEADER *locale_table;
     const NLS_LOCALE_DATA *locale;
+    char *p;
 
     setlocale( LC_ALL, "" );
     if (!unix_to_win_locale( setlocale( LC_CTYPE, NULL ), system_locale )) system_locale[0] = 0;
@@ -807,9 +808,9 @@ static void init_locale(void)
 #ifdef __APPLE__
     if (!system_locale[0])
     {
-        CFLocaleRef locale = CFLocaleCopyCurrent();
-        CFStringRef lang = CFLocaleGetValue( locale, kCFLocaleLanguageCode );
-        CFStringRef country = CFLocaleGetValue( locale, kCFLocaleCountryCode );
+        CFLocaleRef mac_sys_locale = CFLocaleCopyCurrent();
+        CFStringRef lang = CFLocaleGetValue( mac_sys_locale, kCFLocaleLanguageCode );
+        CFStringRef country = CFLocaleGetValue( mac_sys_locale, kCFLocaleCountryCode );
         CFStringRef locale_string;
 
         if (country)
@@ -818,7 +819,7 @@ static void init_locale(void)
             locale_string = CFStringCreateCopy(NULL, lang);
 
         CFStringGetCString(locale_string, system_locale, sizeof(system_locale), kCFStringEncodingUTF8);
-        CFRelease(locale);
+        CFRelease(mac_sys_locale);
         CFRelease(locale_string);
     }
     if (!user_locale[0])
@@ -833,21 +834,26 @@ static void init_locale(void)
             {
                 CFStringRef lang = CFDictionaryGetValue( components, kCFLocaleLanguageCode );
                 CFStringRef country = CFDictionaryGetValue( components, kCFLocaleCountryCode );
-                CFLocaleRef locale = NULL;
+                CFStringRef script = CFDictionaryGetValue( components, kCFLocaleScriptCode );
+                CFLocaleRef mac_user_locale = NULL;
                 CFStringRef locale_string;
 
                 if (!country)
                 {
-                    locale = CFLocaleCopyCurrent();
-                    country = CFLocaleGetValue( locale, kCFLocaleCountryCode );
+                    mac_user_locale = CFLocaleCopyCurrent();
+                    country = CFLocaleGetValue( mac_user_locale, kCFLocaleCountryCode );
                 }
-                if (country)
+                if (country && script)
+                    locale_string = CFStringCreateWithFormat( NULL, NULL, CFSTR("%@-%@-%@"), lang, script, country );
+                else if (script)
+                    locale_string = CFStringCreateWithFormat( NULL, NULL, CFSTR("%@-%@"), lang, script );
+                else if (country)
                     locale_string = CFStringCreateWithFormat( NULL, NULL, CFSTR("%@-%@"), lang, country );
                 else
                     locale_string = CFStringCreateCopy( NULL, lang );
                 CFStringGetCString( locale_string, user_locale, sizeof(user_locale), kCFStringEncodingUTF8 );
                 CFRelease( locale_string );
-                if (locale) CFRelease( locale );
+                if (mac_user_locale) CFRelease( mac_user_locale );
                 CFRelease( components );
             }
         }
@@ -858,10 +864,21 @@ static void init_locale(void)
     if ((header = read_nls_file( "locale.nls" )))
     {
         locale_table = (const NLS_LOCALE_HEADER *)((char *)header + header->locales);
-        if ((locale =  get_win_locale( locale_table, system_locale )) && locale->idefaultlanguage != LOCALE_CUSTOM_UNSPECIFIED)
+        while (!(locale = get_win_locale( locale_table, system_locale )))
+        {
+            if (!(p = strrchr( system_locale, '-' ))) break;
+            *p = 0;
+        }
+        if (locale && locale->idefaultlanguage != LOCALE_CUSTOM_UNSPECIFIED)
             system_lcid = locale->idefaultlanguage;
-        if ((locale =  get_win_locale( locale_table, user_locale )))
-            user_lcid = locale->idefaultlanguage;
+
+        while (!(locale = get_win_locale( locale_table, user_locale )))
+        {
+            if (!(p = strrchr( user_locale, '-' ))) break;
+            *p = 0;
+        }
+        if (locale) user_lcid = locale->idefaultlanguage;
+
         free( header );
     }
     if (!system_lcid) system_lcid = MAKELANGID( LANG_ENGLISH, SUBLANG_DEFAULT );

@@ -395,6 +395,7 @@
 @ stdcall GetTaskmanWindow ()
 @ stdcall GetThreadDesktop(long) NtUserGetThreadDesktop
 @ stdcall GetThreadDpiAwarenessContext()
+@ stdcall GetThreadDpiHostingBehavior()
 @ stdcall GetTitleBarInfo(long ptr) NtUserGetTitleBarInfo
 @ stdcall GetTopWindow(long)
 @ stdcall GetTouchInputInfo(long long ptr long)
@@ -720,7 +721,7 @@
 @ stdcall SetTaskmanWindow (long)
 @ stdcall SetThreadDesktop(long) NtUserSetThreadDesktop
 @ stdcall SetThreadDpiAwarenessContext(ptr)
-@ stdcall SetThreadDpiHostingBehavior(ptr)
+@ stdcall SetThreadDpiHostingBehavior(long)
 @ stdcall SetTimer(long long long ptr)
 @ stdcall SetUserObjectInformationA(long long ptr long)
 @ stdcall SetUserObjectInformationW(long long ptr long) NtUserSetObjectInformation

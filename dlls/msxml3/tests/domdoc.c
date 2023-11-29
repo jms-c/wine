@@ -13327,6 +13327,7 @@ static struct attrtest_t attrtests[] = {
     { 0 }
 };
 
+/* see dlls/msxml[46]/tests/domdoc.c */
 static void test_create_attribute(void)
 {
     struct attrtest_t *ptr = attrtests;
@@ -13676,6 +13677,7 @@ static void test_namespaces_as_attributes(void)
         const char *uris[3];
         const char *texts[3];
         const char *xmls[3];
+        BOOL todo;
     };
     static const struct test tests[] = {
         {
@@ -13706,6 +13708,17 @@ static void test_namespaces_as_attributes(void)
             { "" },         /* namespaceURI */
             { "nshref" },   /* text */
             { "xmlns:ns=\"nshref\"" }, /* xml */
+        },
+        /* default namespace */
+        {
+            "<a xmlns=\"nshref\" />", 1,
+            { "xmlns" },            /* nodeName */
+            { "xmlns" },            /* prefix */
+            { "" },                 /* baseName */
+            { "" },                 /* namespaceURI */
+            { "nshref" },           /* text */
+            { "xmlns=\"nshref\"" }, /* xml */
+            TRUE,                   /* todo */
         },
         /* no properties or namespaces */
         {
@@ -13760,7 +13773,9 @@ static void test_namespaces_as_attributes(void)
             {
                 item = NULL;
                 hr = IXMLDOMNamedNodeMap_get_item(map, i, &item);
+                todo_wine_if(test->todo)
                 ok(hr == S_OK, "Unexpected hr %#lx.\n", hr);
+                if (hr != S_OK) continue;
 
                 str = NULL;
                 hr = IXMLDOMNode_get_nodeName(item, &str);
