@@ -43,9 +43,6 @@ struct wm_char_mapping_data
     MSG  get_msg;
 };
 
-extern WINAPI long SetThreadDpiHostingBehavior(long v);
-extern WINAPI long GetWindowDpiHostingBehavior(HWND v);
-
 extern HMODULE user32_module;
 
 extern BOOL post_dde_message( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam, DWORD dest_tid,

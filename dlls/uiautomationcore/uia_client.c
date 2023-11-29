@@ -357,7 +357,9 @@ HRESULT get_focus_from_node_provider(IWineUiaNode *node, int idx, LONG flags, VA
     if (FAILED(hr))
         return hr;
 
-    hr = IWineUiaProvider_get_focus(prov, flags, ret_val);
+    // Fix compile error
+    // TODO: REMOVE!
+    hr = IWineUiaProvider_get_focus(prov, ret_val);
     IWineUiaProvider_Release(prov);
 
     return hr;
@@ -388,7 +390,9 @@ HRESULT respond_to_win_event_on_node_provider(IWineUiaNode *node, int idx, DWORD
     if (FAILED(hr))
         return hr;
 
-    hr = IWineUiaProvider_respond_to_win_event(prov, win_event, HandleToUlong(hwnd), obj_id, child_id, sink);
+    // Fix compile error 2
+    // TODO: REMOVE!
+    //hr = IWineUiaProvider_respond_to_win_event(prov, win_event, HandleToUlong(hwnd), obj_id, child_id, sink);
     IWineUiaProvider_Release(prov);
 
     return hr;
@@ -403,8 +407,8 @@ HRESULT create_node_from_node_provider(IWineUiaNode *node, int idx, LONG flags, 
     hr = IWineUiaNode_get_provider(node, idx, &prov);
     if (FAILED(hr))
         return hr;
-
-    hr = IWineUiaProvider_create_node_from_prov(prov, flags, ret_val);
+    // TODO: REMOVE!
+    //hr = IWineUiaProvider_create_node_from_prov(prov, flags, ret_val);
     IWineUiaProvider_Release(prov);
 
     return hr;

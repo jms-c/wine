@@ -146,6 +146,36 @@ struct _FILE_FS_DEVICE_INFORMATION;
 
 extern const char wine_build[];
 
+<<<<<<< HEAD
+extern const char *home_dir DECLSPEC_HIDDEN;
+extern const char *data_dir DECLSPEC_HIDDEN;
+extern const char *build_dir DECLSPEC_HIDDEN;
+extern const char *config_dir DECLSPEC_HIDDEN;
+extern const char *user_name DECLSPEC_HIDDEN;
+extern const char **dll_paths DECLSPEC_HIDDEN;
+extern const char **system_dll_paths DECLSPEC_HIDDEN;
+extern pthread_key_t teb_key DECLSPEC_HIDDEN;
+extern PEB *peb DECLSPEC_HIDDEN;
+extern USHORT *uctable DECLSPEC_HIDDEN;
+extern USHORT *lctable DECLSPEC_HIDDEN;
+extern SIZE_T startup_info_size DECLSPEC_HIDDEN;
+extern BOOL is_prefix_bootstrap DECLSPEC_HIDDEN;
+extern SECTION_IMAGE_INFORMATION main_image_info DECLSPEC_HIDDEN;
+extern int main_argc DECLSPEC_HIDDEN;
+extern char **main_argv DECLSPEC_HIDDEN;
+extern char **main_envp DECLSPEC_HIDDEN;
+extern WCHAR **main_wargv DECLSPEC_HIDDEN;
+extern const WCHAR system_dir[] DECLSPEC_HIDDEN;
+extern unsigned int supported_machines_count DECLSPEC_HIDDEN;
+extern USHORT supported_machines[8] DECLSPEC_HIDDEN;
+extern BOOL process_exiting DECLSPEC_HIDDEN;
+extern BOOL localsystem_sid DECLSPEC_HIDDEN;
+extern HANDLE keyed_event DECLSPEC_HIDDEN;
+extern timeout_t server_start_time DECLSPEC_HIDDEN;
+extern sigset_t server_block_set DECLSPEC_HIDDEN;
+extern struct _KUSER_SHARED_DATA *user_shared_data DECLSPEC_HIDDEN;
+extern SYSTEM_CPU_INFORMATION cpu_info DECLSPEC_HIDDEN;
+=======
 extern const char *home_dir;
 extern const char *data_dir;
 extern const char *build_dir;
@@ -167,12 +197,12 @@ extern const WCHAR system_dir[];
 extern unsigned int supported_machines_count;
 extern USHORT supported_machines[8];
 extern BOOL process_exiting;
-extern BOOL localsystem_sid;
 extern HANDLE keyed_event;
 extern timeout_t server_start_time;
 extern sigset_t server_block_set;
 extern struct _KUSER_SHARED_DATA *user_shared_data;
 extern SYSTEM_CPU_INFORMATION cpu_info;
+>>>>>>> upstream/master
 #ifdef __i386__
 extern struct ldt_copy __wine_ldt_copy;
 #endif
@@ -290,7 +320,7 @@ extern NTSTATUS open_hkcu_key( const char *path, HANDLE *key );
 
 extern NTSTATUS cdrom_DeviceIoControl( HANDLE device, HANDLE event, PIO_APC_ROUTINE apc, void *apc_user,
                                        IO_STATUS_BLOCK *io, UINT code, void *in_buffer,
-                                       UINT in_size, void *out_buffer, UINT out_size ) DECLSPEC_HIDDEN;
+                                       UINT in_size, void *out_buffer, UINT out_size );
 extern NTSTATUS serial_DeviceIoControl( HANDLE device, HANDLE event, PIO_APC_ROUTINE apc, void *apc_user,
                                         IO_STATUS_BLOCK *io, UINT code, void *in_buffer,
                                         UINT in_size, void *out_buffer, UINT out_size );

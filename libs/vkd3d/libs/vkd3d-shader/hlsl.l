@@ -96,7 +96,7 @@ matrix                  {return KW_MATRIX;              }
 namespace               {return KW_NAMESPACE;           }
 nointerpolation         {return KW_NOINTERPOLATION;     }
 out                     {return KW_OUT;                 }
-packoffset              {return KW_PACKOFFSET;          }
+packoffset              {return 0;          } // TODO: Remove!
 pass                    {return KW_PASS;                }
 PixelShader             {return KW_PIXELSHADER;         }
 precise                 {return KW_PRECISE;             }
@@ -104,8 +104,8 @@ RasterizerState         {return KW_RASTERIZERSTATE;     }
 RenderTargetView        {return KW_RENDERTARGETVIEW;    }
 return                  {return KW_RETURN;              }
 register                {return KW_REGISTER;            }
-RWBuffer                {return KW_RWBUFFER;            }
-RWStructuredBuffer      {return KW_RWSTRUCTUREDBUFFER;  }
+RWBuffer                {return KW_TBUFFER;            } // TODO: Remove!
+RWStructuredBuffer      {return D3D_SVT_RWSTRUCTURED_BUFFER;  } // TODO: Remove!
 RWTexture1D             {return KW_RWTEXTURE1D;         }
 RWTexture2D             {return KW_RWTEXTURE2D;         }
 RWTexture3D             {return KW_RWTEXTURE3D;         }
