@@ -870,6 +870,9 @@ static bool stream_create_post_processing_elements(GstPad *pad, struct wg_parser
                 || !append_element(parser->container, element, &first, &last))
             return false;
 
+        /* Let GStreamer choose a default number of threads. */
+        gst_util_set_object_arg(G_OBJECT(element), "n-threads", "0");
+
         /* GStreamer outputs RGB video top-down, but DirectShow expects bottom-up. */
         if (!(element = create_element("videoflip", "good"))
                 || !append_element(parser->container, element, &first, &last))
@@ -881,6 +884,9 @@ static bool stream_create_post_processing_elements(GstPad *pad, struct wg_parser
         if (!(element = create_element("videoconvert", "base"))
                 || !append_element(parser->container, element, &first, &last))
             return false;
+
+        /* Let GStreamer choose a default number of threads. */
+        gst_util_set_object_arg(G_OBJECT(element), "n-threads", "0");
 
         if (!link_src_to_element(pad, first) || !link_element_to_sink(last, stream->my_sink))
             return false;
@@ -1915,6 +1921,7 @@ const unixlib_entry_t __wine_unix_call_funcs[] =
     X(wg_transform_get_status),
     X(wg_transform_drain),
     X(wg_transform_flush),
+    X(wg_transform_notify_qos),
 
     X(wg_muxer_create),
     X(wg_muxer_destroy),
@@ -2247,6 +2254,7 @@ const unixlib_entry_t __wine_unix_call_wow64_funcs[] =
     X(wg_transform_get_status),
     X(wg_transform_drain),
     X(wg_transform_flush),
+    X(wg_transform_notify_qos),
 
     X64(wg_muxer_create),
     X(wg_muxer_destroy),

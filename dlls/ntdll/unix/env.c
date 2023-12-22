@@ -892,7 +892,7 @@ static void init_locale(void)
 /***********************************************************************
  *              init_environment
  */
-void init_environment( int argc, char *argv[], char *envp[] )
+void init_environment(void)
 {
     USHORT *case_table;
 
@@ -904,10 +904,6 @@ void init_environment( int argc, char *argv[], char *envp[] )
         uctable = case_table + 2;
         lctable = case_table + case_table[1] + 2;
     }
-
-    main_argc = argc;
-    main_argv = argv;
-    main_envp = envp;
 }
 
 
@@ -1400,6 +1396,9 @@ static void get_initial_console( RTL_USER_PROCESS_PARAMETERS *params )
     wine_server_fd_to_handle( 1, GENERIC_WRITE|SYNCHRONIZE, OBJ_INHERIT, &params->hStdOutput );
     wine_server_fd_to_handle( 2, GENERIC_WRITE|SYNCHRONIZE, OBJ_INHERIT, &params->hStdError );
 
+    if (main_image_info.SubSystemType != IMAGE_SUBSYSTEM_WINDOWS_CUI)
+        return;
+
     /* mark tty handles for kernelbase, see init_console */
     if (params->hStdInput && isatty(0))
     {
@@ -1418,7 +1417,7 @@ static void get_initial_console( RTL_USER_PROCESS_PARAMETERS *params )
         params->hStdOutput = (HANDLE)((UINT_PTR)params->hStdOutput | 1);
         output_fd = 1;
     }
-    if (!params->ConsoleHandle && main_image_info.SubSystemType == IMAGE_SUBSYSTEM_WINDOWS_CUI)
+    if (!params->ConsoleHandle)
         params->ConsoleHandle = CONSOLE_HANDLE_SHELL_NO_WINDOW;
 
     if (output_fd != -1)
@@ -2143,10 +2142,21 @@ void init_startup_info(void)
 }
 
 
+/* helper for create_startup_info */
+static BOOL is_console_handle( HANDLE handle )
+{
+    IO_STATUS_BLOCK io;
+    DWORD mode;
+
+    return NtDeviceIoControlFile( handle, NULL, NULL, NULL, &io, IOCTL_CONDRV_GET_MODE, NULL, 0,
+                                  &mode, sizeof(mode) ) == STATUS_SUCCESS;
+}
+
 /***********************************************************************
  *           create_startup_info
  */
-void *create_startup_info( const UNICODE_STRING *nt_image, const RTL_USER_PROCESS_PARAMETERS *params,
+void *create_startup_info( const UNICODE_STRING *nt_image, ULONG process_flags,
+                           const RTL_USER_PROCESS_PARAMETERS *params,
                            const pe_image_info_t *pe_info, DWORD *info_size )
 {
     startup_info_t *info;
@@ -2175,9 +2185,16 @@ void *create_startup_info( const UNICODE_STRING *nt_image, const RTL_USER_PROCES
     info->console_flags = params->ConsoleFlags;
     if (pe_info->subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI)
         info->console   = wine_server_obj_handle( params->ConsoleHandle );
-    info->hstdin        = wine_server_obj_handle( params->hStdInput );
-    info->hstdout       = wine_server_obj_handle( params->hStdOutput );
-    info->hstderr       = wine_server_obj_handle( params->hStdError );
+    if ((process_flags & PROCESS_CREATE_FLAGS_INHERIT_HANDLES) ||
+        (pe_info->subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI && !(params->dwFlags & STARTF_USESTDHANDLES)))
+    {
+        if (pe_info->subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI || !is_console_handle( params->hStdInput ))
+            info->hstdin    = wine_server_obj_handle( params->hStdInput );
+        if (pe_info->subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI || !is_console_handle( params->hStdOutput ))
+            info->hstdout   = wine_server_obj_handle( params->hStdOutput );
+        if (pe_info->subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI || !is_console_handle( params->hStdError ))
+            info->hstderr   = wine_server_obj_handle( params->hStdError );
+    }
     info->x             = params->dwX;
     info->y             = params->dwY;
     info->xsize         = params->dwXSize;

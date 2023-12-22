@@ -1557,7 +1557,6 @@ struct wined3d_shader_backend_ops
     void (*shader_init_context_state)(struct wined3d_context *context);
     void (*shader_get_caps)(const struct wined3d_adapter *adapter, struct shader_caps *caps);
     BOOL (*shader_color_fixup_supported)(struct color_fixup_desc fixup);
-    BOOL (*shader_has_ffp_proj_control)(void *shader_priv);
     uint64_t (*shader_compile)(struct wined3d_context *context, const struct wined3d_shader_desc *shader_desc,
         enum wined3d_shader_type shader_type);
 };
@@ -1976,7 +1975,6 @@ struct wined3d_context
 
 void wined3d_context_cleanup(struct wined3d_context *context);
 void wined3d_context_init(struct wined3d_context *context, struct wined3d_swapchain *swapchain);
-void context_preload_textures(struct wined3d_context *context, const struct wined3d_state *state);
 void context_update_stream_info(struct wined3d_context *context, const struct wined3d_state *state);
 
 HRESULT wined3d_context_no3d_init(struct wined3d_context *context_no3d,
@@ -2884,7 +2882,6 @@ struct wined3d_state
     struct wined3d_shader_resource_view *shader_resource_view[WINED3D_SHADER_TYPE_COUNT][MAX_SHADER_RESOURCE_VIEWS];
     struct wined3d_unordered_access_view *unordered_access_view[WINED3D_PIPELINE_COUNT][MAX_UNORDERED_ACCESS_VIEWS];
 
-    struct wined3d_texture *textures[WINED3D_MAX_COMBINED_SAMPLERS];
     uint32_t texture_states[WINED3D_MAX_FFP_TEXTURES][WINED3D_HIGHEST_TEXTURE_STATE + 1];
 
     struct wined3d_matrix transforms[WINED3D_HIGHEST_TRANSFORM_STATE + 1];
@@ -3202,6 +3199,7 @@ struct wined3d_resource
     UINT depth;
     UINT size;
     unsigned int priority;
+    void *heap_pointer;
     void *heap_memory;
 
     uint32_t pin_sysmem : 1;
@@ -3334,6 +3332,8 @@ struct wined3d_texture
 
     unsigned int row_pitch;
     unsigned int slice_pitch;
+
+    struct wined3d_shader_resource_view *identity_srv;
 
     /* May only be accessed from the command stream worker thread. */
     struct wined3d_texture_async
@@ -3558,13 +3558,17 @@ enum wined3d_cs_queue_id
     WINED3D_CS_QUEUE_COUNT,
 };
 
-#define WINED3D_CS_QUERY_POLL_INTERVAL  10u
+#define WINED3D_CS_QUERY_POLL_INTERVAL  100u
 #if defined(_WIN64)
 #define WINED3D_CS_QUEUE_SIZE           0x1000000u
 #else
 #define WINED3D_CS_QUEUE_SIZE           0x400000u
 #endif
 #define WINED3D_CS_SPIN_COUNT           2000u
+/* How long to wait for commands when there are active queries, in µs. */
+#define WINED3D_CS_COMMAND_WAIT_WITH_QUERIES_TIMEOUT 100
+/* How long to wait for the CS from the client thread, in µs. */
+#define WINED3D_CS_CLIENT_WAIT_TIMEOUT  0
 #define WINED3D_CS_QUEUE_MASK           (WINED3D_CS_QUEUE_SIZE - 1)
 
 C_ASSERT(!(WINED3D_CS_QUEUE_SIZE & (WINED3D_CS_QUEUE_SIZE - 1)));
@@ -3728,8 +3732,9 @@ void wined3d_device_context_emit_set_stream_outputs(struct wined3d_device_contex
         const struct wined3d_stream_output outputs[WINED3D_MAX_STREAM_OUTPUT_BUFFERS]);
 void wined3d_device_context_emit_set_stream_sources(struct wined3d_device_context *context,
         unsigned int start_idx, unsigned int count, const struct wined3d_stream_state *streams);
-void wined3d_device_context_emit_set_texture(struct wined3d_device_context *context, unsigned int stage,
-        struct wined3d_texture *texture);
+void wined3d_device_context_emit_set_texture(struct wined3d_device_context *context,
+        enum wined3d_shader_type shader_type, unsigned int bind_index,
+        struct wined3d_shader_resource_view *view);
 void wined3d_device_context_emit_set_texture_state(struct wined3d_device_context *context, unsigned int stage,
         enum wined3d_texture_stage_state state, unsigned int value);
 void wined3d_device_context_emit_set_transform(struct wined3d_device_context *context,
@@ -3756,6 +3761,16 @@ static inline void wined3d_resource_reference(struct wined3d_resource *resource)
     resource->access_time = cs->queue[WINED3D_CS_QUEUE_DEFAULT].head;
 }
 
+#define WINED3D_PAUSE_SPIN_COUNT 200u
+
+static inline void wined3d_pause(unsigned int *spin_count)
+{
+    static const LARGE_INTEGER timeout = {.QuadPart = WINED3D_CS_CLIENT_WAIT_TIMEOUT * -10};
+
+    if (++*spin_count >= WINED3D_PAUSE_SPIN_COUNT)
+        NtDelayExecution(FALSE, &timeout);
+}
+
 static inline BOOL wined3d_ge_wrap(ULONG x, ULONG y)
 {
     return (x - y) < UINT_MAX / 2;
@@ -3766,6 +3781,7 @@ static inline void wined3d_resource_wait_idle(const struct wined3d_resource *res
 {
     const struct wined3d_cs *cs = resource->device->cs;
     ULONG access_time, tail, head;
+    unsigned int spin_count = 0;
 
     if (!cs->thread || cs->thread_id == GetCurrentThreadId())
         return;
@@ -3804,7 +3820,7 @@ static inline void wined3d_resource_wait_idle(const struct wined3d_resource *res
         if (!wined3d_ge_wrap(access_time, tail) && access_time != tail)
             break;
 
-        YieldProcessor();
+        wined3d_pause(&spin_count);
     }
 }
 
@@ -3935,11 +3951,14 @@ struct wined3d_shader_resource_view
 };
 
 void wined3d_shader_resource_view_cleanup(struct wined3d_shader_resource_view *view);
+void wined3d_shader_resource_view_destroy(struct wined3d_shader_resource_view *view);
 
 static inline struct wined3d_texture *wined3d_state_get_ffp_texture(const struct wined3d_state *state, unsigned int idx)
 {
+    struct wined3d_shader_resource_view *view = state->shader_resource_view[WINED3D_SHADER_TYPE_PIXEL][idx];
+
     assert(idx <= WINED3D_MAX_FFP_TEXTURES);
-    return state->textures[idx];
+    return view ? texture_from_resource(view->resource) : NULL;
 }
 
 struct wined3d_unordered_access_view
@@ -4011,7 +4030,9 @@ struct wined3d_swapchain
     unsigned int swap_interval;
     unsigned int max_frame_latency;
 
-    LONG prev_time, frames;   /* Performance tracking */
+    /* Performance tracking */
+    LARGE_INTEGER last_present_time;
+    LONG prev_time, frames;
 
     struct wined3d_swapchain_state state;
     HWND win_handle;
