@@ -1433,7 +1433,8 @@ static void sync_client_position( struct x11drv_win_data *data,
         TRACE( "setting client win %lx pos %d,%d,%dx%d changes=%x\n",
                data->client_window, changes.x, changes.y, changes.width, changes.height, mask );
         XConfigureWindow( gdi_display, data->client_window, mask, &changes );
-        resize_vk_surfaces( data->hwnd, data->client_window, mask, &changes );
+        // TODO: FORK: Readd this code with correct function
+        //resize_vk_surfaces( data->hwnd, data->client_window, mask, &changes );
     }
 }
 
@@ -1853,10 +1854,10 @@ void X11DRV_SetWindowStyle( HWND hwnd, INT offset, STYLESTRUCT *style )
     {
         if (NtUserGetWindowRelative( parent, GW_CHILD ) ||
             NtUserGetAncestor( parent, GA_PARENT ) != NtUserGetDesktopWindow())
-            sync_vk_surface( parent, TRUE );
+            XSync( parent, TRUE );
         else
-            sync_vk_surface( parent, FALSE );
-        sync_vk_surface( hwnd, style->styleNew & WS_CHILD );
+            XSync( parent, FALSE );
+        XSync( hwnd, style->styleNew & WS_CHILD );
     }
 
     if (hwnd == NtUserGetDesktopWindow()) return;
@@ -1888,7 +1889,7 @@ void X11DRV_DestroyWindow( HWND hwnd )
 
     if (!NtUserGetWindowRelative( parent, GW_CHILD ) &&
         NtUserGetAncestor( parent, GA_PARENT ) == NtUserGetDesktopWindow())
-        sync_vk_surface( parent, FALSE );
+        XSync( parent, FALSE );
 
     if (!(data = get_win_data( hwnd ))) return;
 
@@ -1903,7 +1904,7 @@ void X11DRV_DestroyWindow( HWND hwnd )
     release_win_data( data );
     free( data );
     destroy_gl_drawable( hwnd );
-    destroy_vk_surface( hwnd );
+    wine_vk_surface_destroy( hwnd );
 }
 
 
@@ -2122,7 +2123,7 @@ static struct x11drv_win_data *X11DRV_create_win_data( HWND hwnd, const RECT *wi
      * that will need clipping support.
      */
     sync_gl_drawable( parent, TRUE );
-    sync_vk_surface( parent, TRUE );
+    XSync( parent, TRUE );
 
     display = thread_init_display();
     init_clip_window();  /* make sure the clip window is initialized in this thread */
@@ -2551,7 +2552,7 @@ done:
      * that will need clipping support.
      */
     sync_gl_drawable( parent, TRUE );
-    sync_vk_surface( parent, TRUE );
+    XSync( parent, TRUE );
 
     fetch_icon_data( hwnd, 0, 0 );
 }

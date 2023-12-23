@@ -36,6 +36,7 @@
 #include "xcomposite.h"
 #include "wine/debug.h"
 
+
 WINE_DEFAULT_DEBUG_CHANNEL(x11drv);
 
 Display *gdi_display;  /* display to use for all GDI functions */

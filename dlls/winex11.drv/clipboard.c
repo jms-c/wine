@@ -2172,13 +2172,13 @@ static void xfixes_init(void)
 #ifdef SONAME_LIBXFIXES
     if (!use_xfixes) return;
 
-    pXFixesSelectSelectionInput(clipboard_display, import_window, x11drv_atom(CLIPBOARD),
+    XFixesSelectSelectionInput(clipboard_display, import_window, x11drv_atom(CLIPBOARD),
             XFixesSetSelectionOwnerNotifyMask |
             XFixesSelectionWindowDestroyNotifyMask |
             XFixesSelectionClientCloseNotifyMask);
     if (use_primary_selection)
     {
-        pXFixesSelectSelectionInput(clipboard_display, import_window, XA_PRIMARY,
+        XFixesSelectSelectionInput(clipboard_display, import_window, XA_PRIMARY,
                 XFixesSetSelectionOwnerNotifyMask |
                 XFixesSelectionWindowDestroyNotifyMask |
                 XFixesSelectionClientCloseNotifyMask);

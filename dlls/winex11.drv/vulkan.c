@@ -732,6 +732,25 @@ const struct vulkan_funcs *get_vulkan_driver(UINT version)
     return NULL;
 }
 
+Window wine_vk_active_surface( HWND hwnd )
+{
+    struct wine_vk_surface *surface, *active = NULL;
+    Window window;
+
+    pthread_mutex_lock(&vulkan_mutex);
+    LIST_FOR_EACH_ENTRY(surface, &surface_list, struct wine_vk_surface, entry)
+    {
+        if (surface->hwnd != hwnd) continue;
+        active = surface;
+    }
+    if (!active) window = None;
+    else window = active->window;
+    pthread_mutex_unlock(&vulkan_mutex);
+
+    return window;
+}
+
+
 #else /* No vulkan */
 
 const struct vulkan_funcs *get_vulkan_driver(UINT version)
