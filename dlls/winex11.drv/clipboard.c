@@ -83,7 +83,6 @@
 #include "ntstatus.h"
 #define WIN32_NO_STATUS
 #include "x11drv.h"
-#include "xfixes.h"
 
 #ifdef HAVE_X11_EXTENSIONS_XFIXES_H
 #include <X11/extensions/Xfixes.h>
@@ -200,6 +199,7 @@ static UINT rendered_formats;
 static ULONG last_clipboard_update;
 static struct clipboard_format **current_x11_formats;
 static unsigned int nb_current_x11_formats;
+static BOOL use_xfixes;
 
 Display *clipboard_display = NULL;
 
@@ -2170,22 +2170,43 @@ static BOOL selection_notify_event( HWND hwnd, XEvent *event )
 static void xfixes_init(void)
 {
 #ifdef SONAME_LIBXFIXES
+    typeof(XFixesSelectSelectionInput) *pXFixesSelectSelectionInput;
+    typeof(XFixesQueryExtension) *pXFixesQueryExtension;
+    typeof(XFixesQueryVersion) *pXFixesQueryVersion;
+
+    int event_base, error_base;
+    int major = 3, minor = 0;
+    void *handle;
+
+    handle = dlopen(SONAME_LIBXFIXES, RTLD_NOW);
+    if (!handle) return;
+
+    pXFixesQueryExtension = dlsym(handle, "XFixesQueryExtension");
+    if (!pXFixesQueryExtension) return;
+    pXFixesQueryVersion = dlsym(handle, "XFixesQueryVersion");
+    if (!pXFixesQueryVersion) return;
+    pXFixesSelectSelectionInput = dlsym(handle, "XFixesSelectSelectionInput");
+    if (!pXFixesSelectSelectionInput) return;
+
+    if (!pXFixesQueryExtension(clipboard_display, &event_base, &error_base))
+        return;
+    pXFixesQueryVersion(clipboard_display, &major, &minor);
+    use_xfixes = (major >= 1);
     if (!use_xfixes) return;
 
-    XFixesSelectSelectionInput(clipboard_display, import_window, x11drv_atom(CLIPBOARD),
+    pXFixesSelectSelectionInput(clipboard_display, import_window, x11drv_atom(CLIPBOARD),
             XFixesSetSelectionOwnerNotifyMask |
             XFixesSelectionWindowDestroyNotifyMask |
             XFixesSelectionClientCloseNotifyMask);
     if (use_primary_selection)
     {
-        XFixesSelectSelectionInput(clipboard_display, import_window, XA_PRIMARY,
+        pXFixesSelectSelectionInput(clipboard_display, import_window, XA_PRIMARY,
                 XFixesSetSelectionOwnerNotifyMask |
                 XFixesSelectionWindowDestroyNotifyMask |
                 XFixesSelectionClientCloseNotifyMask);
     }
-    // No clue how to fix
-    //X11DRV_register_event_handler(xfixes_event_base + XFixesSelectionNotify,
-    //        selection_notify_event, "XFixesSelectionNotify");
+    X11DRV_register_event_handler(event_base + XFixesSelectionNotify,
+            selection_notify_event, "XFixesSelectionNotify");
     TRACE("xfixes succesully initialized\n");
 #else
     WARN("xfixes not supported\n");
@@ -2332,3 +2353,4 @@ BOOL X11DRV_SelectionClear( HWND hwnd, XEvent *xev )
     request_selection_contents( event->display, TRUE );
     return FALSE;
 }
+
