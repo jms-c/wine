@@ -62,6 +62,7 @@ static inline BOOL get_pending_wmchar( MSG *msg, UINT first, UINT last, BOOL rem
     return TRUE;
 }
 
+
 /***********************************************************************
  *           MessageWndProc
  *

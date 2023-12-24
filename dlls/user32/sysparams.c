@@ -25,6 +25,7 @@
 
 WINE_DEFAULT_DEBUG_CHANNEL(system);
 
+
 static HDC display_dc;
 static CRITICAL_SECTION display_dc_section;
 static CRITICAL_SECTION_DEBUG critsect_debug =
